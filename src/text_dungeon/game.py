@@ -46,26 +46,60 @@ class Game:
         arg = arg.strip()
 
         if verb in DIRECTIONS:
-            self.move(DIRECTIONS[verb])
-        elif verb == "go" and arg:
-            self.move(DIRECTIONS.get(arg, arg))
-        elif verb == "look":
-            self.look()
-        elif verb == "take" and arg:
-            self.take(arg)
-        elif verb in ("inventory", "i", "inv"):
-            self.show_inventory()
-        elif verb == "attack":
-            self.attack()
-        elif verb == "use" and arg:
-            self.use(arg)
-        elif verb == "help":
-            print(HELP_TEXT)
-        elif verb == "quit":
-            print("You flee the dungeon.")
-            self.running = False
-        else:
+            verb, arg = "go", DIRECTIONS[verb]
+
+        handler = self.COMMANDS.get(verb)
+        if handler is None:
             print("You're not sure how to do that. Type 'help' for commands.")
+            return
+        handler(self, arg)
+
+    def _cmd_go(self, arg: str) -> None:
+        if not arg:
+            print("Go where?")
+            return
+        self.move(DIRECTIONS.get(arg, arg))
+
+    def _cmd_look(self, arg: str) -> None:
+        self.look()
+
+    def _cmd_take(self, arg: str) -> None:
+        if not arg:
+            print("Take what?")
+            return
+        self.take(arg)
+
+    def _cmd_inventory(self, arg: str) -> None:
+        self.show_inventory()
+
+    def _cmd_attack(self, arg: str) -> None:
+        self.attack()
+
+    def _cmd_use(self, arg: str) -> None:
+        if not arg:
+            print("Use what?")
+            return
+        self.use(arg)
+
+    def _cmd_help(self, arg: str) -> None:
+        print(HELP_TEXT)
+
+    def _cmd_quit(self, arg: str) -> None:
+        print("You flee the dungeon.")
+        self.running = False
+
+    COMMANDS = {
+        "go": _cmd_go,
+        "look": _cmd_look,
+        "take": _cmd_take,
+        "inventory": _cmd_inventory,
+        "i": _cmd_inventory,
+        "inv": _cmd_inventory,
+        "attack": _cmd_attack,
+        "use": _cmd_use,
+        "help": _cmd_help,
+        "quit": _cmd_quit,
+    }
 
     def current_room(self) -> Room:
         return self.rooms[self.player.current_room]
