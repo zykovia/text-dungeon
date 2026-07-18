@@ -9,7 +9,7 @@ from .models import Room
 def compute_coords(rooms: dict[str, Room], start: str = "entrance") -> dict[str, tuple[int, int]]:
     """Derive grid coordinates for each room by walking cardinal exits from `start`.
 
-    Assumes the exit graph is a consistent planar grid (as built by generate_dungeon) —
+    Assumes the exit graph is a consistent planar grid (as built by generate_dungeon):
     a room reached two different ways would silently keep whichever coordinate it
     got first.
     """
