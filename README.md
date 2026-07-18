@@ -3,6 +3,10 @@
 A small text-based dungeon crawler written in Python. Play it in a terminal,
 or as a browser game served over WebSocket.
 
+Each run generates a fresh, randomly laid-out dungeon (6-10 rooms), so no two
+playthroughs are the same. Defeating monsters earns experience; reaching 10 XP
+levels you up (+5 max HP, full heal).
+
 ## Play in the browser (Docker)
 
 ```bash
@@ -68,6 +72,7 @@ Then open http://localhost:8000.
 - `inventory` / `i` — show your inventory
 - `attack` — fight the monster in the room
 - `use <item>` — use an item (e.g. drink a potion)
+- `map` / `m` — show a minimap of the rooms you've explored
 - `help` — list commands
 - `quit` — leave the dungeon
 
