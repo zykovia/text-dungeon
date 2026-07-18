@@ -25,10 +25,22 @@ class Game:
         self.rooms = build_world()
         self.player = Player(name="Adventurer")
         self.running = True
+        self.output: list[str] = []
+
+    def emit(self, text: str = "") -> None:
+        self.output.append(text)
+
+    def pop_output(self) -> list[str]:
+        lines, self.output = self.output, []
+        return lines
+
+    def intro(self) -> None:
+        self.emit("You descend into the dungeon. Type 'help' for a list of commands.")
+        self.look()
 
     def run(self) -> None:
-        print("You descend into the dungeon. Type 'help' for a list of commands.\n")
-        self.look()
+        self.intro()
+        self._flush()
         while self.running and self.player.alive:
             try:
                 command = input("\n> ").strip().lower()
@@ -37,9 +49,16 @@ class Game:
                 return
             if command:
                 self.handle_command(command)
+                self._flush()
 
         if not self.player.alive:
-            print("\nYou have died. Game over.")
+            self.emit("")
+            self.emit("You have died. Game over.")
+            self._flush()
+
+    def _flush(self) -> None:
+        for line in self.pop_output():
+            print(line)
 
     def handle_command(self, command: str) -> None:
         verb, _, arg = command.partition(" ")
@@ -50,13 +69,13 @@ class Game:
 
         handler = self.COMMANDS.get(verb)
         if handler is None:
-            print("You're not sure how to do that. Type 'help' for commands.")
+            self.emit("You're not sure how to do that. Type 'help' for commands.")
             return
         handler(self, arg)
 
     def _cmd_go(self, arg: str) -> None:
         if not arg:
-            print("Go where?")
+            self.emit("Go where?")
             return
         self.move(DIRECTIONS.get(arg, arg))
 
@@ -65,7 +84,7 @@ class Game:
 
     def _cmd_take(self, arg: str) -> None:
         if not arg:
-            print("Take what?")
+            self.emit("Take what?")
             return
         self.take(arg)
 
@@ -77,15 +96,16 @@ class Game:
 
     def _cmd_use(self, arg: str) -> None:
         if not arg:
-            print("Use what?")
+            self.emit("Use what?")
             return
         self.use(arg)
 
     def _cmd_help(self, arg: str) -> None:
-        print(HELP_TEXT)
+        for line in HELP_TEXT.splitlines():
+            self.emit(line)
 
     def _cmd_quit(self, arg: str) -> None:
-        print("You flee the dungeon.")
+        self.emit("You flee the dungeon.")
         self.running = False
 
     COMMANDS = {
@@ -106,23 +126,24 @@ class Game:
 
     def look(self) -> None:
         room = self.current_room()
-        print(f"\n== {room.name} ==")
-        print(room.description)
+        self.emit("")
+        self.emit(f"== {room.name} ==")
+        self.emit(room.description)
         if room.monster and room.monster.alive:
-            print(f"A {room.monster.name} blocks your path! ({room.monster.description})")
+            self.emit(f"A {room.monster.name} blocks your path! ({room.monster.description})")
         if room.items:
             names = ", ".join(item.name for item in room.items)
-            print(f"You see: {names}")
-        print(f"Exits: {', '.join(sorted(room.exits))}")
+            self.emit(f"You see: {names}")
+        self.emit(f"Exits: {', '.join(sorted(room.exits))}")
 
     def move(self, direction: str) -> None:
         room = self.current_room()
         if room.monster and room.monster.alive:
-            print(f"The {room.monster.name} blocks your way. You must attack or find another path.")
+            self.emit(f"The {room.monster.name} blocks your way. You must attack or find another path.")
             return
         destination = room.exits.get(direction)
         if not destination:
-            print("You can't go that way.")
+            self.emit("You can't go that way.")
             return
         self.player.current_room = destination
         self.look()
@@ -133,38 +154,38 @@ class Game:
             if item.name == item_name:
                 room.items.remove(item)
                 self.player.inventory.append(item)
-                print(f"You take the {item.name}.")
+                self.emit(f"You take the {item.name}.")
                 if item.name == "golden crown":
                     self.win()
                 return
-        print(f"There's no '{item_name}' here.")
+        self.emit(f"There's no '{item_name}' here.")
 
     def show_inventory(self) -> None:
         if not self.player.inventory:
-            print("You aren't carrying anything.")
+            self.emit("You aren't carrying anything.")
             return
         for item in self.player.inventory:
-            print(f"- {item.name}: {item.description}")
+            self.emit(f"- {item.name}: {item.description}")
 
     def attack(self) -> None:
         room = self.current_room()
         monster = room.monster
         if not monster or not monster.alive:
-            print("There's nothing here to attack.")
+            self.emit("There's nothing here to attack.")
             return
 
         bonus = sum(item.damage_bonus for item in self.player.inventory)
         damage = self.player.attack + bonus + random.randint(0, 3)
         monster.hp -= damage
-        print(f"You strike the {monster.name} for {damage} damage.")
+        self.emit(f"You strike the {monster.name} for {damage} damage.")
 
         if not monster.alive:
-            print(f"You have defeated the {monster.name}!")
+            self.emit(f"You have defeated the {monster.name}!")
             return
 
         incoming = max(0, monster.attack + random.randint(-1, 2))
         self.player.hp -= incoming
-        print(f"The {monster.name} hits you for {incoming} damage. ({self.player.hp}/{self.player.max_hp} HP)")
+        self.emit(f"The {monster.name} hits you for {incoming} damage. ({self.player.hp}/{self.player.max_hp} HP)")
 
     def use(self, item_name: str) -> None:
         for item in self.player.inventory:
@@ -173,13 +194,14 @@ class Game:
                     healed = min(item.heal, self.player.max_hp - self.player.hp)
                     self.player.hp += healed
                     self.player.inventory.remove(item)
-                    print(f"You use the {item.name} and recover {healed} HP. ({self.player.hp}/{self.player.max_hp} HP)")
+                    self.emit(f"You use the {item.name} and recover {healed} HP. ({self.player.hp}/{self.player.max_hp} HP)")
                 else:
-                    print(f"You can't use the {item.name} right now.")
+                    self.emit(f"You can't use the {item.name} right now.")
                 return
-        print(f"You don't have a '{item_name}'.")
+        self.emit(f"You don't have a '{item_name}'.")
 
     def win(self) -> None:
-        print("\nYou place the golden crown upon your head. The dungeon trembles and falls silent.")
-        print("You have conquered Text Dungeon. Victory!")
+        self.emit("")
+        self.emit("You place the golden crown upon your head. The dungeon trembles and falls silent.")
+        self.emit("You have conquered Text Dungeon. Victory!")
         self.running = False

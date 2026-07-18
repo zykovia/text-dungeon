@@ -1,0 +1,92 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #05070a;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Courier New", Courier, monospace;
+  padding: 16px;
+}
+
+#terminal {
+  width: min(90vw, 820px);
+  height: min(85vh, 620px);
+  background: #001400;
+  border: 2px solid #2ecc40;
+  border-radius: 8px;
+  box-shadow: 0 0 24px rgba(46, 204, 64, 0.35), inset 0 0 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#titlebar {
+  padding: 10px 16px;
+  border-bottom: 1px solid #145214;
+  color: #33ff33;
+  letter-spacing: 4px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+#output {
+  flex: 1;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  font-size: 15px;
+  padding: 16px;
+  color: #33ff33;
+  text-shadow: 0 0 4px rgba(51, 255, 51, 0.5);
+}
+
+.echo {
+  color: #8cff8c;
+  opacity: 0.85;
+}
+
+#input-line {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #145214;
+  padding: 10px 16px;
+}
+
+#prompt {
+  margin-right: 8px;
+  color: #33ff33;
+}
+
+#command-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #33ff33;
+  font-family: inherit;
+  font-size: 15px;
+  caret-color: #33ff33;
+}
+
+#command-input:disabled {
+  opacity: 0.4;
+}
+
+#output::-webkit-scrollbar {
+  width: 8px;
+}
+
+#output::-webkit-scrollbar-thumb {
+  background: #145214;
+  border-radius: 4px;
+}

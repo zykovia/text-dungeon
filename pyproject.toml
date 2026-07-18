@@ -4,9 +4,14 @@ version = "0.1.0"
 description = "A text-based dungeon crawler"
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+]
 
 [project.scripts]
 text-dungeon = "text_dungeon.__main__:main"
+text-dungeon-web = "text_dungeon.web.server:main"
 
 [project.optional-dependencies]
 dev = ["pytest"]
