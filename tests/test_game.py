@@ -1,8 +1,9 @@
 from collections import deque
 
+from text_dungeon.directions import OPPOSITE_DIRECTION
 from text_dungeon.game import Game
 from text_dungeon.models import Item, Monster
-from text_dungeon.world import OPPOSITE_DIRECTION, generate_dungeon
+from text_dungeon.world import generate_dungeon
 
 
 def test_generate_dungeon_all_rooms_reachable_from_entrance():

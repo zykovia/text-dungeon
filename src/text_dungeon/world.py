@@ -1,10 +1,8 @@
 import random
 from collections import deque
 
+from .directions import DIRECTION_DELTAS, OPPOSITE_DIRECTION
 from .models import Item, Monster, Room
-
-DIRECTION_DELTAS = {"north": (0, 1), "south": (0, -1), "east": (1, 0), "west": (-1, 0)}
-OPPOSITE_DIRECTION = {"north": "south", "south": "north", "east": "west", "west": "east"}
 
 ENTRANCE_NAME = "Dungeon Entrance"
 ENTRANCE_DESCRIPTION = (
@@ -43,27 +41,6 @@ BOSS_ROOM_NAME = "Throne of the Dungeon Lord"
 BOSS_ROOM_DESCRIPTION = "A massive figure sits upon a throne of bones, waiting."
 BOSS_DESCRIPTION = "The master of this dungeon, clad in black iron."
 WIN_ITEM_NAME = "golden crown"
-
-
-def compute_coords(rooms: dict[str, Room], start: str = "entrance") -> dict[str, tuple[int, int]]:
-    """Derive grid coordinates for each room by walking cardinal exits from `start`.
-
-    Assumes the exit graph is a consistent planar grid (as built by generate_dungeon) —
-    a room reached two different ways would silently keep whichever coordinate it
-    got first.
-    """
-    coords = {start: (0, 0)}
-    queue = deque([start])
-    while queue:
-        room_id = queue.popleft()
-        x, y = coords[room_id]
-        for direction, dest in rooms[room_id].exits.items():
-            delta = DIRECTION_DELTAS.get(direction)
-            if delta is None or dest in coords:
-                continue
-            coords[dest] = (x + delta[0], y + delta[1])
-            queue.append(dest)
-    return coords
 
 
 def _bfs_distances(rooms: dict[str, Room], start: str) -> dict[str, int]:

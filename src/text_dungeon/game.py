@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import random
-
+from .combat import resolve_attack
+from .directions import DIRECTION_SHORTHAND
+from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
+from .minimap import compute_coords
+from .minimap import render_map as build_map_lines
 from .models import Player, Room
-from .world import BOSS_NAME, compute_coords, generate_dungeon
-
-MONSTER_XP = 2
-BOSS_XP = 5
-XP_PER_LEVEL = 10
-LEVEL_UP_HP_BONUS = 5
+from .world import BOSS_NAME, generate_dungeon
 
 HELP_TEXT = """
 Commands:
@@ -23,7 +21,7 @@ Commands:
   quit             give up and leave the dungeon
 """.strip()
 
-DIRECTIONS = {"n": "north", "s": "south", "e": "east", "w": "west"}
+DIRECTIONS = DIRECTION_SHORTHAND
 
 
 class Game:
@@ -191,33 +189,25 @@ class Game:
             self.emit("There's nothing here to attack.")
             return
 
-        bonus = sum(item.damage_bonus for item in self.player.inventory)
-        damage = self.player.attack + bonus + random.randint(0, 3)
-        monster.hp -= damage
-        self.emit(f"You strike the {monster.name} for {damage} damage.")
+        result = resolve_attack(self.player, monster)
+        self.emit(f"You strike the {monster.name} for {result.damage_dealt} damage.")
 
-        if not monster.alive:
+        if result.monster_defeated:
             self.emit(f"You have defeated the {monster.name}!")
-            xp_gained = BOSS_XP if monster.name == BOSS_NAME else MONSTER_XP
-            self.gain_xp(xp_gained)
+            xp_gained = xp_for_kill(monster.name, BOSS_NAME)
+            level_ups = gain_xp(self.player, xp_gained)
+            self.emit(f"You gain {xp_gained} experience. ({self.player.xp} XP)")
+            for level_up in level_ups:
+                self.emit(
+                    f"You reached level {level_up.level}! "
+                    f"Max HP is now {level_up.max_hp}, and you feel fully healed."
+                )
             return
 
-        incoming = max(0, monster.attack + random.randint(-1, 2))
-        self.player.hp -= incoming
-        self.emit(f"The {monster.name} hits you for {incoming} damage. ({self.player.hp}/{self.player.max_hp} HP)")
-
-    def gain_xp(self, amount: int) -> None:
-        self.player.xp += amount
-        self.emit(f"You gain {amount} experience. ({self.player.xp} XP)")
-        while self.player.xp >= XP_PER_LEVEL:
-            self.player.xp -= XP_PER_LEVEL
-            self.player.level += 1
-            self.player.max_hp += LEVEL_UP_HP_BONUS
-            self.player.hp = self.player.max_hp
-            self.emit(
-                f"You reached level {self.player.level}! "
-                f"Max HP is now {self.player.max_hp}, and you feel fully healed."
-            )
+        self.emit(
+            f"The {monster.name} hits you for {result.incoming_damage} damage. "
+            f"({self.player.hp}/{self.player.max_hp} HP)"
+        )
 
     def use(self, item_name: str) -> None:
         for item in self.player.inventory:
@@ -233,36 +223,8 @@ class Game:
         self.emit(f"You don't have a '{item_name}'.")
 
     def render_map(self) -> None:
-        visited = self.player.visited
-        if not visited:
-            self.emit("You haven't explored anywhere yet.")
-            return
-
-        known = set(visited)
-        for room_id in visited:
-            known.update(self.rooms[room_id].exits.values())
-
-        xs = [self.coords[room_id][0] for room_id in known]
-        ys = [self.coords[room_id][1] for room_id in known]
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-        room_at = {self.coords[room_id]: room_id for room_id in known}
-
-        self.emit("")
-        self.emit("Map:")
-        for y in range(max_y, min_y - 1, -1):
-            row = []
-            for x in range(min_x, max_x + 1):
-                room_id = room_at.get((x, y))
-                if room_id is None:
-                    row.append("   ")
-                elif room_id == self.player.current_room:
-                    row.append("[@]")
-                elif room_id in visited:
-                    row.append("[#]")
-                else:
-                    row.append("[?]")
-            self.emit("".join(row))
+        for line in build_map_lines(self.rooms, self.coords, self.player.visited, self.player.current_room):
+            self.emit(line)
 
     def win(self) -> None:
         self.emit("")
