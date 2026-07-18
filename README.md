@@ -20,6 +20,22 @@ docker build -t text-dungeon .
 docker run --rm -p 8000:8000 text-dungeon
 ```
 
+## Play with others on your WiFi
+
+The server already binds to all interfaces, so anyone on your local network
+can join once the container is running — you just need to hand them a URL.
+`scripts/play.sh` does this for you: it builds and starts the container, then
+prints a shareable LAN URL and a scannable QR code (via `qrencode` if
+installed, e.g. `brew install qrencode`, otherwise a plain URL).
+
+```bash
+./scripts/play.sh
+```
+
+Point phones/laptops on the same WiFi at the printed `http://<your-ip>:8000`
+(or the `.local` Bonjour address on Apple devices). Press Ctrl+C to stop and
+tear down the container.
+
 ## Setup (local development)
 
 ```bash
