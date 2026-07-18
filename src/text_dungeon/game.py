@@ -142,6 +142,7 @@ class Game:
         if room.items:
             names = ", ".join(item.name for item in room.items)
             self.emit(f"You see: {names}")
+        self.emit(f"HP: {self.player.hp}/{self.player.max_hp}")
         self.emit(f"Exits: {', '.join(sorted(room.exits))}")
 
     def move(self, direction: str) -> None:
