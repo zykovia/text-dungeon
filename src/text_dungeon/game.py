@@ -76,7 +76,9 @@ class Game:
     def move(self, direction: str) -> None:
         room = self.current_room()
         if room.monster and room.monster.alive:
-            self.emit(f"The {room.monster.name} blocks your way. You must attack or find another path.")
+            self.emit(
+                f"The {room.monster.name} blocks your way. You must attack or find another path."
+            )
             return
         destination = room.exits.get(direction)
         if not destination:
@@ -138,18 +140,25 @@ class Game:
                     healed = min(item.heal, self.player.max_hp - self.player.hp)
                     self.player.hp += healed
                     self.player.inventory.remove(item)
-                    self.emit(f"You use the {item.name} and recover {healed} HP. ({self.player.hp}/{self.player.max_hp} HP)")
+                    self.emit(
+                        f"You use the {item.name} and recover {healed} HP. "
+                        f"({self.player.hp}/{self.player.max_hp} HP)"
+                    )
                 else:
                     self.emit(f"You can't use the {item.name} right now.")
                 return
         self.emit(f"You don't have a '{item_name}'.")
 
     def render_map(self) -> None:
-        for line in build_map_lines(self.rooms, self.coords, self.player.visited, self.player.current_room):
+        for line in build_map_lines(
+            self.rooms, self.coords, self.player.visited, self.player.current_room
+        ):
             self.emit(line)
 
     def win(self) -> None:
         self.emit("")
-        self.emit("You place the golden crown upon your head. The dungeon trembles and falls silent.")
+        self.emit(
+            "You place the golden crown upon your head. The dungeon trembles and falls silent."
+        )
         self.emit("You have conquered Text Dungeon. Victory!")
         self.running = False
