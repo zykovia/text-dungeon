@@ -1,9 +1,10 @@
 const output = document.getElementById("output");
 const input = document.getElementById("command-input");
+const form = document.getElementById("input-line");
 
 function appendLine(text, className) {
   const div = document.createElement("div");
-  div.textContent = text === "" ? " " : text;
+  div.textContent = text === "" ? " " : text;
   if (className) {
     div.className = className;
   }
@@ -13,6 +14,20 @@ function appendLine(text, className) {
 
 function appendLines(lines) {
   lines.forEach((line) => appendLine(line));
+}
+
+// Tracks the real visible viewport (excluding an open on-screen keyboard) so
+// the input line stays visible instead of being pushed off-screen or hidden
+// behind the keyboard on mobile browsers.
+function setAppHeight() {
+  const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty("--app-height", `${height}px`);
+}
+setAppHeight();
+window.addEventListener("resize", setAppHeight);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", setAppHeight);
+  window.visualViewport.addEventListener("scroll", setAppHeight);
 }
 
 function connect() {
@@ -39,13 +54,14 @@ function connect() {
     socket.close();
   });
 
-  input.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
     const command = input.value.trim();
     if (!command || socket.readyState !== WebSocket.OPEN) return;
     appendLine(`> ${command}`, "echo");
     socket.send(command);
     input.value = "";
+    input.focus();
   });
 }
 

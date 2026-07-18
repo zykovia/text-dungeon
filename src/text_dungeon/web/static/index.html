@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+<meta name="theme-color" content="#001400" />
 <title>Text Dungeon</title>
 <link rel="stylesheet" href="/static/style.css" />
 </head>
@@ -10,10 +11,21 @@
   <div id="terminal">
     <div id="titlebar">TEXT DUNGEON</div>
     <div id="output" role="log" aria-live="polite"></div>
-    <div id="input-line">
+    <form id="input-line">
       <span id="prompt">&gt;</span>
-      <input id="command-input" type="text" autocomplete="off" spellcheck="false" autofocus />
-    </div>
+      <input
+        id="command-input"
+        type="text"
+        autocomplete="off"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="text"
+        enterkeyhint="go"
+        autofocus
+      />
+      <button id="send" type="submit" aria-label="Send command">Go</button>
+    </form>
   </div>
   <script src="/static/app.js"></script>
 </body>
