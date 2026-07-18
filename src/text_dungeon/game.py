@@ -11,11 +11,23 @@ from .world import BOSS_NAME, generate_dungeon
 
 class Game:
     def __init__(self, seed: int | None = None) -> None:
-        self.rooms = generate_dungeon(seed=seed)
-        self.coords = compute_coords(self.rooms)
+        self._enter_new_dungeon(seed)
         self.player = Player(name="Adventurer")
         self.running = True
         self.output: list[str] = []
+
+    def _enter_new_dungeon(self, seed: int | None) -> None:
+        self.rooms = generate_dungeon(seed=seed)
+        self.coords = compute_coords(self.rooms)
+
+    def respawn(self, seed: int | None = None) -> None:
+        """Start a new dungeon after death, keeping inventory, level, and XP."""
+        self._enter_new_dungeon(seed)
+        self.player.current_room = "entrance"
+        self.player.hp = self.player.max_hp
+        self.player.visited = set()
+        self.emit("You awaken at the entrance of a new dungeon, your gear and experience intact.")
+        self.look()
 
     def emit(self, text: str = "") -> None:
         self.output.append(text)
@@ -31,7 +43,7 @@ class Game:
     def run(self) -> None:
         self.intro()
         self._flush()
-        while self.running and self.player.alive:
+        while self.running:
             try:
                 command = input("\n> ").strip().lower()
             except (EOFError, KeyboardInterrupt):
@@ -39,12 +51,11 @@ class Game:
                 return
             if command:
                 self.handle_command(command)
+                if not self.player.alive:
+                    self.emit("")
+                    self.emit("You have died.")
+                    self.respawn()
                 self._flush()
-
-        if not self.player.alive:
-            self.emit("")
-            self.emit("You have died. Game over.")
-            self._flush()
 
     def _flush(self) -> None:
         for line in self.pop_output():

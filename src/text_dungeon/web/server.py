@@ -31,12 +31,12 @@ async def play(websocket: WebSocket) -> None:
             command = (await websocket.receive_text()).strip().lower()
             if command:
                 game.handle_command(command)
+                if not game.player.alive:
+                    game.emit("")
+                    game.emit("You have died.")
+                    game.respawn()
 
-            game_over = not game.running or not game.player.alive
-            if not game.player.alive:
-                game.emit("")
-                game.emit("You have died. Game over.")
-
+            game_over = not game.running
             await websocket.send_json({"lines": game.pop_output(), "game_over": game_over})
             if game_over:
                 break

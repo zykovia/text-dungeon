@@ -5,7 +5,8 @@ or as a browser game served over WebSocket.
 
 Each run generates a fresh, randomly laid-out dungeon (6-10 rooms), so no two
 playthroughs are the same. Defeating monsters earns experience; reaching 10 XP
-levels you up (+5 max HP, full heal).
+levels you up (+5 max HP, full heal). Dying doesn't end the game: you wake up
+at the entrance of a brand new dungeon, keeping your inventory, level, and XP.
 
 ## Play in the browser (Docker)
 
