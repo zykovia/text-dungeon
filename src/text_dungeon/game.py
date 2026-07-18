@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 
 from .models import Player, Room
-from .world import build_world, compute_coords
+from .world import compute_coords, generate_dungeon
 
 HELP_TEXT = """
 Commands:
@@ -22,8 +22,8 @@ DIRECTIONS = {"n": "north", "s": "south", "e": "east", "w": "west"}
 
 
 class Game:
-    def __init__(self) -> None:
-        self.rooms = build_world()
+    def __init__(self, seed: int | None = None) -> None:
+        self.rooms = generate_dungeon(seed=seed)
         self.coords = compute_coords(self.rooms)
         self.player = Player(name="Adventurer")
         self.running = True
