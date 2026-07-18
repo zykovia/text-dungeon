@@ -1,32 +1,51 @@
 from __future__ import annotations
 
+from .balance import MAX_DUNGEON_LEVEL
 from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
 from .minimap import compute_coords
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
-from .world import BOSS_NAME, generate_dungeon
+from .templates import BOSS, SUPER_BOSS, WIN_ITEM_NAME
+from .world import generate_dungeon, is_final_dungeon, room_count_range
 
 
 class Game:
     def __init__(self, seed: int | None = None) -> None:
-        self._enter_new_dungeon(seed)
         self.player = Player(name="Adventurer")
+        self._enter_new_dungeon(seed)
         self.running = True
         self.output: list[str] = []
 
     def _enter_new_dungeon(self, seed: int | None) -> None:
-        self.rooms = generate_dungeon(seed=seed)
+        min_rooms, max_rooms = room_count_range(self.player.dungeon_level)
+        final_boss = is_final_dungeon(self.player.dungeon_level)
+        self.rooms = generate_dungeon(
+            seed=seed, min_rooms=min_rooms, max_rooms=max_rooms, final_boss=final_boss
+        )
         self.coords = compute_coords(self.rooms)
 
-    def respawn(self, seed: int | None = None) -> None:
-        """Start a new dungeon after death, keeping inventory, level, and XP."""
-        self._enter_new_dungeon(seed)
+    def _relocate_to_entrance(self) -> None:
         self.player.current_room = "entrance"
         self.player.hp = self.player.max_hp
         self.player.visited = set()
+
+    def respawn(self, seed: int | None = None) -> None:
+        """Start a new dungeon of the same size after death, keeping inventory, level, and XP."""
+        self._enter_new_dungeon(seed)
+        self._relocate_to_entrance()
         self.emit("You awaken at the entrance of a new dungeon, your gear and experience intact.")
+        self.look()
+
+    def advance(self, seed: int | None = None) -> None:
+        """Descend into a new, larger dungeon after defeating the boss."""
+        self.player.dungeon_level += 1
+        self._enter_new_dungeon(seed)
+        self._relocate_to_entrance()
+        self.emit(
+            f"A new dungeon awaits below, larger than the last (depth {self.player.dungeon_level})."
+        )
         self.look()
 
     def emit(self, text: str = "") -> None:
@@ -105,8 +124,16 @@ class Game:
                 room.items.remove(item)
                 self.player.inventory.append(item)
                 self.emit(f"You take the {item.name}.")
-                if item.name == "golden crown":
-                    self.win()
+                if item.name == WIN_ITEM_NAME:
+                    self.emit("")
+                    self.emit(
+                        "You place the golden crown upon your head. "
+                        "The dungeon trembles and falls silent."
+                    )
+                    if is_final_dungeon(self.player.dungeon_level):
+                        self.win()
+                    else:
+                        self.advance()
                 return
         self.emit(f"There's no '{item_name}' here.")
 
@@ -129,7 +156,7 @@ class Game:
 
         if result.monster_defeated:
             self.emit(f"You have defeated the {monster.name}!")
-            xp_gained = xp_for_kill(monster.name, BOSS_NAME)
+            xp_gained = xp_for_kill(monster.name, BOSS.monster_name, SUPER_BOSS.monster_name)
             level_ups = gain_xp(self.player, xp_gained)
             self.emit(f"You gain {xp_gained} experience. ({self.player.xp} XP)")
             for level_up in level_ups:
@@ -167,9 +194,8 @@ class Game:
             self.emit(line)
 
     def win(self) -> None:
-        self.emit("")
         self.emit(
-            "You place the golden crown upon your head. The dungeon trembles and falls silent."
+            f"You have conquered all {MAX_DUNGEON_LEVEL} dungeons and slain the "
+            f"{SUPER_BOSS.monster_name}. Victory!"
         )
-        self.emit("You have conquered Text Dungeon. Victory!")
         self.running = False

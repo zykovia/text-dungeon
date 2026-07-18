@@ -8,6 +8,12 @@ playthroughs are the same. Defeating monsters earns experience; reaching 10 XP
 levels you up (+5 max HP, full heal). Dying doesn't end the game: you wake up
 at the entrance of a brand new dungeon, keeping your inventory, level, and XP.
 
+Defeating the boss and taking the crown descends you into a new dungeon too,
+2 rooms larger (both min and max) than the one before, keeping your gear,
+level, and XP. This happens up to 7 dungeons deep; the 7th holds the Dungeon
+Emperor, a much tougher super boss. Defeat it and take its crown to win the
+game for good.
+
 ## Play in the browser (Docker)
 
 ```bash

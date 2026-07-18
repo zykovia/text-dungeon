@@ -14,6 +14,7 @@ class Player:
     visited: set[str] = field(default_factory=set)
     level: int = 1
     xp: int = 0
+    dungeon_level: int = 1
 
     @property
     def alive(self) -> bool:

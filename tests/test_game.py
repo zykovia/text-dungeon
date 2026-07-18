@@ -1,5 +1,7 @@
+from text_dungeon.balance import MAX_DUNGEON_LEVEL
 from text_dungeon.game import Game
 from text_dungeon.models import Item, Monster
+from text_dungeon.world import room_count_range
 
 
 def test_move_between_rooms():
@@ -81,3 +83,55 @@ def test_dying_and_respawning_keeps_game_running():
 
     assert game.running is True
     assert game.player.alive
+
+
+def test_taking_the_crown_advances_to_a_new_larger_dungeon():
+    game = Game(seed=1)
+    game.player.level = 2
+    game.player.xp = 3
+    game.current_room().items.append(Item("rusty sword", "A worn blade.", damage_bonus=2))
+    game.take("rusty sword")
+
+    game.current_room().items.append(Item("golden crown", "The Dungeon Lord's crown."))
+    game.take("golden crown")
+
+    assert game.player.dungeon_level == 2
+    assert game.player.level == 2
+    assert game.player.xp == 3
+    assert any(item.name == "rusty sword" for item in game.player.inventory)
+    assert any(item.name == "golden crown" for item in game.player.inventory)
+    assert game.player.current_room == "entrance"
+    assert game.running is True
+
+
+def test_advancing_generates_a_dungeon_sized_for_the_new_level():
+    game = Game(seed=1)
+    game.player.dungeon_level = 3
+
+    game.advance(seed=5)
+
+    assert game.player.dungeon_level == 4
+    min_rooms, max_rooms = room_count_range(4)
+    assert min_rooms <= len(game.rooms) <= max_rooms
+
+
+def test_taking_the_crown_at_max_dungeon_level_ends_the_game():
+    game = Game(seed=1)
+    game.player.dungeon_level = MAX_DUNGEON_LEVEL
+    game.current_room().items.append(Item("golden crown", "The Dungeon Emperor's crown."))
+
+    game.take("golden crown")
+
+    assert game.running is False
+    assert game.player.dungeon_level == MAX_DUNGEON_LEVEL
+
+
+def test_taking_the_crown_below_max_dungeon_level_advances():
+    game = Game(seed=1)
+    game.player.dungeon_level = MAX_DUNGEON_LEVEL - 1
+    game.current_room().items.append(Item("golden crown", "The Dungeon Lord's crown."))
+
+    game.take("golden crown")
+
+    assert game.running is True
+    assert game.player.dungeon_level == MAX_DUNGEON_LEVEL
