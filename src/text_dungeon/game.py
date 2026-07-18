@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 
 from .models import Player, Room
-from .world import build_world
+from .world import build_world, compute_coords
 
 HELP_TEXT = """
 Commands:
@@ -13,6 +13,7 @@ Commands:
   inventory (i)    show what you're carrying
   attack           attack the monster in the room
   use <item>       use an item from your inventory
+  map (m)          show a map of rooms you've explored
   help             show this message
   quit             give up and leave the dungeon
 """.strip()
@@ -23,6 +24,7 @@ DIRECTIONS = {"n": "north", "s": "south", "e": "east", "w": "west"}
 class Game:
     def __init__(self) -> None:
         self.rooms = build_world()
+        self.coords = compute_coords(self.rooms)
         self.player = Player(name="Adventurer")
         self.running = True
         self.output: list[str] = []
@@ -108,6 +110,9 @@ class Game:
         self.emit("You flee the dungeon.")
         self.running = False
 
+    def _cmd_map(self, arg: str) -> None:
+        self.render_map()
+
     COMMANDS = {
         "go": _cmd_go,
         "look": _cmd_look,
@@ -119,6 +124,8 @@ class Game:
         "use": _cmd_use,
         "help": _cmd_help,
         "quit": _cmd_quit,
+        "map": _cmd_map,
+        "m": _cmd_map,
     }
 
     def current_room(self) -> Room:
@@ -126,6 +133,7 @@ class Game:
 
     def look(self) -> None:
         room = self.current_room()
+        self.player.visited.add(room.id)
         self.emit("")
         self.emit(f"== {room.name} ==")
         self.emit(room.description)
@@ -199,6 +207,38 @@ class Game:
                     self.emit(f"You can't use the {item.name} right now.")
                 return
         self.emit(f"You don't have a '{item_name}'.")
+
+    def render_map(self) -> None:
+        visited = self.player.visited
+        if not visited:
+            self.emit("You haven't explored anywhere yet.")
+            return
+
+        known = set(visited)
+        for room_id in visited:
+            known.update(self.rooms[room_id].exits.values())
+
+        xs = [self.coords[room_id][0] for room_id in known]
+        ys = [self.coords[room_id][1] for room_id in known]
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        room_at = {self.coords[room_id]: room_id for room_id in known}
+
+        self.emit("")
+        self.emit("Map:")
+        for y in range(max_y, min_y - 1, -1):
+            row = []
+            for x in range(min_x, max_x + 1):
+                room_id = room_at.get((x, y))
+                if room_id is None:
+                    row.append("   ")
+                elif room_id == self.player.current_room:
+                    row.append("[@]")
+                elif room_id in visited:
+                    row.append("[#]")
+                else:
+                    row.append("[?]")
+            self.emit("".join(row))
 
     def win(self) -> None:
         self.emit("")

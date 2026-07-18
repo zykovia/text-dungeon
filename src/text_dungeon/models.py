@@ -39,6 +39,7 @@ class Player:
     attack: int = 3
     inventory: list[Item] = field(default_factory=list)
     current_room: str = "entrance"
+    visited: set[str] = field(default_factory=set)
 
     @property
     def alive(self) -> bool:
