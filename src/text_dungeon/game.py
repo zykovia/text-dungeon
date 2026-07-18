@@ -3,7 +3,12 @@ from __future__ import annotations
 import random
 
 from .models import Player, Room
-from .world import compute_coords, generate_dungeon
+from .world import BOSS_NAME, compute_coords, generate_dungeon
+
+MONSTER_XP = 2
+BOSS_XP = 5
+XP_PER_LEVEL = 10
+LEVEL_UP_HP_BONUS = 5
 
 HELP_TEXT = """
 Commands:
@@ -142,7 +147,10 @@ class Game:
         if room.items:
             names = ", ".join(item.name for item in room.items)
             self.emit(f"You see: {names}")
-        self.emit(f"HP: {self.player.hp}/{self.player.max_hp}")
+        self.emit(
+            f"HP: {self.player.hp}/{self.player.max_hp}  "
+            f"Level: {self.player.level}  XP: {self.player.xp}/{XP_PER_LEVEL}"
+        )
         self.emit(f"Exits: {', '.join(sorted(room.exits))}")
 
     def move(self, direction: str) -> None:
@@ -190,11 +198,26 @@ class Game:
 
         if not monster.alive:
             self.emit(f"You have defeated the {monster.name}!")
+            xp_gained = BOSS_XP if monster.name == BOSS_NAME else MONSTER_XP
+            self.gain_xp(xp_gained)
             return
 
         incoming = max(0, monster.attack + random.randint(-1, 2))
         self.player.hp -= incoming
         self.emit(f"The {monster.name} hits you for {incoming} damage. ({self.player.hp}/{self.player.max_hp} HP)")
+
+    def gain_xp(self, amount: int) -> None:
+        self.player.xp += amount
+        self.emit(f"You gain {amount} experience. ({self.player.xp} XP)")
+        while self.player.xp >= XP_PER_LEVEL:
+            self.player.xp -= XP_PER_LEVEL
+            self.player.level += 1
+            self.player.max_hp += LEVEL_UP_HP_BONUS
+            self.player.hp = self.player.max_hp
+            self.emit(
+                f"You reached level {self.player.level}! "
+                f"Max HP is now {self.player.max_hp}, and you feel fully healed."
+            )
 
     def use(self, item_name: str) -> None:
         for item in self.player.inventory:

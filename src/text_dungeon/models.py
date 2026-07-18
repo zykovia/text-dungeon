@@ -40,6 +40,8 @@ class Player:
     inventory: list[Item] = field(default_factory=list)
     current_room: str = "entrance"
     visited: set[str] = field(default_factory=set)
+    level: int = 1
+    xp: int = 0
 
     @property
     def alive(self) -> bool:
