@@ -1,27 +1,12 @@
 from __future__ import annotations
 
 from .combat import resolve_attack
-from .directions import DIRECTION_SHORTHAND
+from .commands import handle_command as dispatch_command
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
 from .minimap import compute_coords
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
 from .world import BOSS_NAME, generate_dungeon
-
-HELP_TEXT = """
-Commands:
-  go <direction>   move north/south/east/west (n/s/e/w)
-  look             describe the current room
-  take <item>      pick up an item
-  inventory (i)    show what you're carrying
-  attack           attack the monster in the room
-  use <item>       use an item from your inventory
-  map (m)          show a map of rooms you've explored
-  help             show this message
-  quit             give up and leave the dungeon
-""".strip()
-
-DIRECTIONS = DIRECTION_SHORTHAND
 
 
 class Game:
@@ -66,70 +51,7 @@ class Game:
             print(line)
 
     def handle_command(self, command: str) -> None:
-        verb, _, arg = command.partition(" ")
-        arg = arg.strip()
-
-        if verb in DIRECTIONS:
-            verb, arg = "go", DIRECTIONS[verb]
-
-        handler = self.COMMANDS.get(verb)
-        if handler is None:
-            self.emit("You're not sure how to do that. Type 'help' for commands.")
-            return
-        handler(self, arg)
-
-    def _cmd_go(self, arg: str) -> None:
-        if not arg:
-            self.emit("Go where?")
-            return
-        self.move(DIRECTIONS.get(arg, arg))
-
-    def _cmd_look(self, arg: str) -> None:
-        self.look()
-
-    def _cmd_take(self, arg: str) -> None:
-        if not arg:
-            self.emit("Take what?")
-            return
-        self.take(arg)
-
-    def _cmd_inventory(self, arg: str) -> None:
-        self.show_inventory()
-
-    def _cmd_attack(self, arg: str) -> None:
-        self.attack()
-
-    def _cmd_use(self, arg: str) -> None:
-        if not arg:
-            self.emit("Use what?")
-            return
-        self.use(arg)
-
-    def _cmd_help(self, arg: str) -> None:
-        for line in HELP_TEXT.splitlines():
-            self.emit(line)
-
-    def _cmd_quit(self, arg: str) -> None:
-        self.emit("You flee the dungeon.")
-        self.running = False
-
-    def _cmd_map(self, arg: str) -> None:
-        self.render_map()
-
-    COMMANDS = {
-        "go": _cmd_go,
-        "look": _cmd_look,
-        "take": _cmd_take,
-        "inventory": _cmd_inventory,
-        "i": _cmd_inventory,
-        "inv": _cmd_inventory,
-        "attack": _cmd_attack,
-        "use": _cmd_use,
-        "help": _cmd_help,
-        "quit": _cmd_quit,
-        "map": _cmd_map,
-        "m": _cmd_map,
-    }
+        dispatch_command(self, command)
 
     def current_room(self) -> Room:
         return self.rooms[self.player.current_room]
