@@ -12,10 +12,22 @@ from .world import generate_dungeon, is_final_dungeon, room_count_range
 
 
 class Game:
-    def __init__(self, seed: int | None = None) -> None:
-        self.player = Player(name="Adventurer")
-        self._enter_new_dungeon(seed)
-        self.running = True
+    def __init__(
+        self,
+        seed: int | None = None,
+        *,
+        player: Player | None = None,
+        rooms: dict[str, Room] | None = None,
+        running: bool = True,
+    ) -> None:
+        """Start a fresh dungeon, or, if `player`/`rooms` are given, resume a saved one."""
+        self.player = player or Player(name="Adventurer")
+        if rooms is not None:
+            self.rooms = rooms
+            self.coords = compute_coords(self.rooms)
+        else:
+            self._enter_new_dungeon(seed)
+        self.running = running
         self.output: list[str] = []
 
     def _enter_new_dungeon(self, seed: int | None) -> None:
