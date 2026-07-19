@@ -8,6 +8,12 @@ from pathlib import Path
 from .game import Game
 from .models import Item, Monster, Player, Room
 
+# Bump this whenever a save produced by an older version of the game could crash
+# or misbehave on load (e.g. a Player/Room field is added, renamed, or removed,
+# or dungeon generation changes in a way old saves shouldn't carry forward).
+# Saves tagged with a different version are discarded instead of being loaded.
+SAVE_VERSION = 2
+
 
 def default_save_dir() -> Path:
     configured = os.environ.get("TEXT_DUNGEON_SAVE_DIR")
@@ -20,6 +26,7 @@ def _save_path(player_id: str, save_dir: Path | None) -> Path:
 
 def _state_from_game(game: Game) -> dict:
     return {
+        "version": SAVE_VERSION,
         "player": dataclasses.asdict(game.player) | {"visited": sorted(game.player.visited)},
         "rooms": {room_id: dataclasses.asdict(room) for room_id, room in game.rooms.items()},
         "running": game.running,
@@ -54,7 +61,11 @@ def load_game(player_id: str, save_dir: Path | None = None) -> Game | None:
     path = _save_path(player_id, save_dir)
     if not path.exists():
         return None
-    return _game_from_state(json.loads(path.read_text()))
+    state = json.loads(path.read_text())
+    if state.get("version") != SAVE_VERSION:
+        path.unlink(missing_ok=True)
+        return None
+    return _game_from_state(state)
 
 
 def delete_save(player_id: str, save_dir: Path | None = None) -> None:

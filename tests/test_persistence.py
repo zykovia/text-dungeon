@@ -1,6 +1,12 @@
+import json
+
 from text_dungeon.game import Game
 from text_dungeon.models import Item
-from text_dungeon.persistence import delete_save, load_game, save_game
+from text_dungeon.persistence import SAVE_VERSION, delete_save, load_game, save_game
+
+
+def _save_path(save_dir, player_id):
+    return save_dir / f"{player_id}.json"
 
 
 def test_load_game_with_no_save_returns_none(tmp_path):
@@ -64,3 +70,38 @@ def test_save_and_load_round_trips_history_and_dungeon_marker(tmp_path):
 
     assert restored.player.history == game.player.history
     assert restored.current_dungeon_history() == game.current_dungeon_history()
+
+
+def test_load_game_rejects_a_save_from_a_different_version(tmp_path):
+    game = Game(seed=1)
+    save_game("player-5", game, save_dir=tmp_path)
+    path = _save_path(tmp_path, "player-5")
+    state = json.loads(path.read_text())
+    state["version"] = SAVE_VERSION - 1
+    path.write_text(json.dumps(state))
+
+    assert load_game("player-5", save_dir=tmp_path) is None
+
+
+def test_load_game_rejects_a_pre_versioning_save_missing_the_version_key(tmp_path):
+    game = Game(seed=1)
+    save_game("player-6", game, save_dir=tmp_path)
+    path = _save_path(tmp_path, "player-6")
+    state = json.loads(path.read_text())
+    del state["version"]
+    path.write_text(json.dumps(state))
+
+    assert load_game("player-6", save_dir=tmp_path) is None
+
+
+def test_load_game_deletes_an_incompatible_save_file(tmp_path):
+    game = Game(seed=1)
+    save_game("player-7", game, save_dir=tmp_path)
+    path = _save_path(tmp_path, "player-7")
+    state = json.loads(path.read_text())
+    state["version"] = SAVE_VERSION - 1
+    path.write_text(json.dumps(state))
+
+    load_game("player-7", save_dir=tmp_path)
+
+    assert not path.exists()
