@@ -135,3 +135,42 @@ def test_taking_the_crown_below_max_dungeon_level_advances():
 
     assert game.running is True
     assert game.player.dungeon_level == MAX_DUNGEON_LEVEL
+
+
+def test_history_records_moves_looks_and_attacks():
+    game = Game(seed=1)
+    game.current_room().monster = Monster("test monster", hp=5, attack=1)
+    direction, _ = next(iter(game.current_room().exits.items()))
+
+    game.handle_command("look")
+    game.attack()
+    game.handle_command(f"go {direction}")
+
+    history_text = "\n".join(game.player.history)
+    assert "test monster" in history_text
+    assert "strike" in history_text
+    assert "Exits" in history_text
+
+
+def test_advancing_starts_a_fresh_current_dungeon_history():
+    game = Game(seed=1)
+    game.handle_command("look")
+    assert len(game.current_dungeon_history()) > 0
+
+    game.advance(seed=5)
+
+    new_dungeon_history = game.current_dungeon_history()
+    assert new_dungeon_history[0] == (
+        f"A new dungeon awaits below, larger than the last (depth {game.player.dungeon_level})."
+    )
+
+
+def test_show_history_does_not_duplicate_itself_on_repeat_calls():
+    game = Game(seed=1)
+    game.handle_command("look")
+    before = list(game.player.history)
+
+    game.show_history()
+    game.pop_output()
+
+    assert game.player.history == before

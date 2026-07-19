@@ -39,7 +39,8 @@ def _resume_or_start(player_id: str | None) -> Game:
         except (OSError, ValueError, KeyError):
             saved = None
         if saved is not None and saved.running:
-            saved.emit("Welcome back. You pick up where you left off.")
+            saved.emit("Welcome back. Here's what's happened in this dungeon so far:")
+            saved.output.extend(saved.current_dungeon_history())
             saved.look()
             return saved
     game = Game()

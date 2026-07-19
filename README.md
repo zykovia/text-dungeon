@@ -20,9 +20,12 @@ game for good.
 docker compose up --build
 ```
 
-Then open http://localhost:8000 in a browser. Each browser tab gets its own
-independent game (a fresh `Game` per WebSocket connection); refreshing the
-page starts a new run.
+Then open http://localhost:8000 in a browser. Your first visit sets a
+`player_id` cookie and starts a new game; the server saves your progress to
+disk after every command and resumes the same game (with a recap of what
+happened in the current dungeon) whenever that browser reconnects, including
+after a server restart. The save is deleted once the game ends (winning or
+quitting), so your next visit starts a fresh run.
 
 Without Compose:
 
@@ -80,6 +83,7 @@ Then open http://localhost:8000.
 - `attack`: fight the monster in the room
 - `use <item>`: use an item (e.g. drink a potion)
 - `map` / `m`: show a minimap of the rooms you've explored
+- `history`: show everything you've done this playthrough
 - `help`: list commands
 - `quit`: leave the dungeon
 

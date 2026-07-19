@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from . import history
 from .balance import MAX_DUNGEON_LEVEL
 from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
@@ -37,6 +38,7 @@ class Game:
             seed=seed, min_rooms=min_rooms, max_rooms=max_rooms, final_boss=final_boss
         )
         self.coords = compute_coords(self.rooms)
+        history.start_new_dungeon(self.player)
 
     def _relocate_to_entrance(self) -> None:
         self.player.current_room = "entrance"
@@ -62,6 +64,7 @@ class Game:
 
     def emit(self, text: str = "") -> None:
         self.output.append(text)
+        history.record(self.player, text)
 
     def pop_output(self) -> list[str]:
         lines, self.output = self.output, []
@@ -156,6 +159,17 @@ class Game:
             return
         for item in self.player.inventory:
             self.emit(f"- {item.name}: {item.description}")
+
+    def current_dungeon_history(self) -> list[str]:
+        return history.current_dungeon_history(self.player)
+
+    def show_history(self) -> None:
+        """Print everything the player has done this playthrough, across all dungeons."""
+        if not self.player.history:
+            self.emit("Nothing has happened yet.")
+            return
+        for line in self.player.history:
+            self.output.append(line)
 
     def attack(self) -> None:
         room = self.current_room()

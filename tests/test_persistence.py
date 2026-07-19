@@ -51,3 +51,16 @@ def test_delete_save_removes_the_saved_game(tmp_path):
     delete_save("player-3", save_dir=tmp_path)
 
     assert load_game("player-3", save_dir=tmp_path) is None
+
+
+def test_save_and_load_round_trips_history_and_dungeon_marker(tmp_path):
+    game = Game(seed=1)
+    game.handle_command("look")
+    direction, _ = next(iter(game.current_room().exits.items()))
+    game.handle_command(f"go {direction}")
+
+    save_game("player-4", game, save_dir=tmp_path)
+    restored = load_game("player-4", save_dir=tmp_path)
+
+    assert restored.player.history == game.player.history
+    assert restored.current_dungeon_history() == game.current_dungeon_history()

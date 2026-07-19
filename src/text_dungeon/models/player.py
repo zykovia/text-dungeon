@@ -15,6 +15,8 @@ class Player:
     level: int = 1
     xp: int = 0
     dungeon_level: int = 1
+    history: list[str] = field(default_factory=list)
+    dungeon_history_start: int = 0
 
     @property
     def alive(self) -> bool:

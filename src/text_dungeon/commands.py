@@ -16,6 +16,7 @@ Commands:
   attack           attack the monster in the room
   use <item>       use an item from your inventory
   map (m)          show a map of rooms you've explored
+  history          show everything you've done this playthrough
   help             show this message
   quit             give up and leave the dungeon
 """.strip()
@@ -68,6 +69,10 @@ def _cmd_map(game: Game, arg: str) -> None:
     game.render_map()
 
 
+def _cmd_history(game: Game, arg: str) -> None:
+    game.show_history()
+
+
 COMMANDS: dict[str, Callable[[Game, str], None]] = {
     "go": _cmd_go,
     "look": _cmd_look,
@@ -81,6 +86,7 @@ COMMANDS: dict[str, Callable[[Game, str], None]] = {
     "quit": _cmd_quit,
     "map": _cmd_map,
     "m": _cmd_map,
+    "history": _cmd_history,
 }
 
 
