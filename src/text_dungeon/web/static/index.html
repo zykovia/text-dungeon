@@ -8,24 +8,55 @@
 <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div id="terminal">
-    <div id="titlebar">TEXT DUNGEON</div>
-    <div id="output" role="log" aria-live="polite"></div>
-    <form id="input-line">
-      <span id="prompt">&gt;</span>
-      <input
-        id="command-input"
-        type="text"
-        autocomplete="off"
-        autocapitalize="off"
-        autocorrect="off"
-        spellcheck="false"
-        inputmode="text"
-        enterkeyhint="go"
-        autofocus
-      />
-      <button id="send" type="submit" aria-label="Send command">Go</button>
-    </form>
+  <div id="app">
+    <aside id="sidebar" aria-label="Player status">
+      <div class="panel" id="stats-panel">
+        <h2>Adventurer</h2>
+        <div class="stat">
+          <span class="stat-label">HP</span>
+          <div class="bar"><div id="hp-fill" class="bar-fill"></div></div>
+          <span id="hp-text" class="stat-value">--/--</span>
+        </div>
+        <div class="stat-row">
+          <span>Level <strong id="level-text">1</strong></span>
+          <span>XP <span id="xp-text">0/10</span></span>
+        </div>
+        <div class="stat-row">
+          <span>Dungeon <span id="dungeon-text">1/7</span></span>
+        </div>
+      </div>
+      <div class="panel" id="map-panel">
+        <h3>Map</h3>
+        <pre id="map-display">You haven't explored anywhere yet.</pre>
+      </div>
+      <div class="panel" id="inventory-panel">
+        <h3>Inventory</h3>
+        <ul id="inventory-list"><li class="empty">Nothing yet.</li></ul>
+      </div>
+    </aside>
+    <div id="sidebar-backdrop"></div>
+    <div id="terminal">
+      <div id="titlebar">
+        <button id="sidebar-toggle" type="button" aria-label="Toggle player status">&#9776;</button>
+        <span id="titlebar-text">TEXT DUNGEON</span>
+      </div>
+      <div id="output" role="log" aria-live="polite"></div>
+      <form id="input-line">
+        <span id="prompt">&gt;</span>
+        <input
+          id="command-input"
+          type="text"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          inputmode="text"
+          enterkeyhint="go"
+          autofocus
+        />
+        <button id="send" type="submit" aria-label="Send command">Go</button>
+      </form>
+    </div>
   </div>
   <script src="/static/app.js"></script>
 </body>

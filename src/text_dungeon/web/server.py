@@ -24,7 +24,9 @@ async def play(websocket: WebSocket) -> None:
     await websocket.accept()
     game = Game()
     game.intro()
-    await websocket.send_json({"lines": game.pop_output(), "game_over": False})
+    await websocket.send_json(
+        {"lines": game.pop_output(), "status": game.status(), "game_over": False}
+    )
 
     try:
         while True:
@@ -37,7 +39,9 @@ async def play(websocket: WebSocket) -> None:
                     game.respawn()
 
             game_over = not game.running
-            await websocket.send_json({"lines": game.pop_output(), "game_over": game_over})
+            await websocket.send_json(
+                {"lines": game.pop_output(), "status": game.status(), "game_over": game_over}
+            )
             if game_over:
                 break
     except WebSocketDisconnect:

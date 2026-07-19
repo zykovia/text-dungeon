@@ -79,6 +79,11 @@ class Game:
     def _flush(self) -> None:
         for line in self.pop_output():
             print(line)
+        s = self.status()
+        print(
+            f"[HP {s['hp']}/{s['max_hp']}  Lv {s['level']} (XP {s['xp']}/{s['xp_per_level']})  "
+            f"Dungeon {s['dungeon_level']}/{s['max_dungeon_level']}]"
+        )
 
     def handle_command(self, command: str) -> None:
         dispatch_command(self, command)
@@ -97,10 +102,6 @@ class Game:
         if room.items:
             names = ", ".join(item.name for item in room.items)
             self.emit(f"You see: {names}")
-        self.emit(
-            f"HP: {self.player.hp}/{self.player.max_hp}  "
-            f"Level: {self.player.level}  XP: {self.player.xp}/{XP_PER_LEVEL}"
-        )
         self.emit(f"Exits: {', '.join(sorted(room.exits))}")
 
     def move(self, direction: str) -> None:
@@ -187,11 +188,31 @@ class Game:
                 return
         self.emit(f"You don't have a '{item_name}'.")
 
-    def render_map(self) -> None:
-        for line in build_map_lines(
+    def _map_lines(self) -> list[str]:
+        return build_map_lines(
             self.rooms, self.coords, self.player.visited, self.player.current_room
-        ):
+        )
+
+    def render_map(self) -> None:
+        for line in self._map_lines():
             self.emit(line)
+
+    def status(self) -> dict:
+        """A snapshot of everything a UI needs for a stats/map/inventory sidebar."""
+        return {
+            "hp": self.player.hp,
+            "max_hp": self.player.max_hp,
+            "level": self.player.level,
+            "xp": self.player.xp,
+            "xp_per_level": XP_PER_LEVEL,
+            "dungeon_level": self.player.dungeon_level,
+            "max_dungeon_level": MAX_DUNGEON_LEVEL,
+            "inventory": [
+                {"name": item.name, "description": item.description}
+                for item in self.player.inventory
+            ],
+            "map_lines": self._map_lines(),
+        }
 
     def win(self) -> None:
         self.emit(
