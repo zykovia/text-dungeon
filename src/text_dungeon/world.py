@@ -40,6 +40,18 @@ def is_final_dungeon(dungeon_level: int) -> bool:
     return dungeon_level >= MAX_DUNGEON_LEVEL
 
 
+def _has_foreign_neighbor(
+    coord: tuple[int, int], source_id: str, room_at_coord: dict[tuple[int, int], str]
+) -> bool:
+    """True if some room other than `source_id` already occupies a cell next to `coord`."""
+    x, y = coord
+    for dx, dy in DIRECTION_DELTAS.values():
+        occupant = room_at_coord.get((x + dx, y + dy))
+        if occupant is not None and occupant != source_id:
+            return True
+    return False
+
+
 def _bfs_distances(rooms: dict[str, Room], start: str) -> dict[str, int]:
     distances = {start: 0}
     queue = deque([start])
@@ -62,9 +74,12 @@ def generate_dungeon(
 
     Growing a tree (never reconnecting to an already-placed room) guarantees the
     result stays a consistent grid with no coordinate conflicts, and that every
-    room is reachable from "entrance". The farthest room from the entrance becomes
-    the boss chamber holding the win condition (the super boss if final_boss is
-    set); remaining rooms get a random scattering of monsters and items.
+    room is reachable from "entrance". A new room is also rejected if it would
+    land grid-adjacent to any room other than the one it's branching off of, so
+    two rooms are never drawn touching on the minimap unless an exit actually
+    connects them. The farthest room from the entrance becomes the boss chamber
+    holding the win condition (the super boss if final_boss is set); remaining
+    rooms get a random scattering of monsters and items.
     """
     rng = random.Random(seed)
     num_rooms = rng.randint(min_rooms, max_rooms)
@@ -73,6 +88,7 @@ def generate_dungeon(
         "entrance": Room(id="entrance", name=ENTRANCE_NAME, description=ENTRANCE_DESCRIPTION)
     }
     coords = {"entrance": (0, 0)}
+    room_at_coord = {(0, 0): "entrance"}
     frontier = ["entrance"]
     rooms_needed = num_rooms - 1
     if rooms_needed <= len(ROOM_TEMPLATES):
@@ -91,7 +107,9 @@ def generate_dungeon(
         for direction in directions:
             dx, dy = DIRECTION_DELTAS[direction]
             new_coord = (source_x + dx, source_y + dy)
-            if new_coord in coords.values():
+            if new_coord in room_at_coord:
+                continue
+            if _has_foreign_neighbor(new_coord, source_id, room_at_coord):
                 continue
 
             new_id = f"room_{next_id}"
@@ -102,6 +120,7 @@ def generate_dungeon(
             rooms[source_id].exits[direction] = new_id
             rooms[new_id] = new_room
             coords[new_id] = new_coord
+            room_at_coord[new_coord] = new_id
             frontier.append(new_id)
             placed = True
             break

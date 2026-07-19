@@ -1,7 +1,8 @@
 from collections import deque
 
 from text_dungeon.balance import MAX_DUNGEON_LEVEL
-from text_dungeon.directions import OPPOSITE_DIRECTION
+from text_dungeon.directions import DIRECTION_DELTAS, OPPOSITE_DIRECTION
+from text_dungeon.minimap import compute_coords
 from text_dungeon.templates import BOSS, SUPER_BOSS
 from text_dungeon.world import generate_dungeon, is_final_dungeon, room_count_range
 
@@ -74,3 +75,19 @@ def test_generate_dungeon_places_regular_boss_by_default():
 def test_generate_dungeon_places_super_boss_when_final():
     rooms = generate_dungeon(seed=42, final_boss=True)
     assert _boss_rooms(rooms)[0].monster.name == SUPER_BOSS.monster_name
+
+
+def test_generate_dungeon_never_places_unconnected_rooms_adjacent():
+    # Two rooms sharing a grid edge must be linked by an exit; otherwise the
+    # minimap would draw them touching even though there's no way to walk
+    # between them.
+    for seed in range(50):
+        rooms = generate_dungeon(seed=seed, min_rooms=18, max_rooms=22)
+        coords = compute_coords(rooms)
+        room_at_coord = {coord: room_id for room_id, coord in coords.items()}
+        for room_id, room in rooms.items():
+            x, y = coords[room_id]
+            for direction, (dx, dy) in DIRECTION_DELTAS.items():
+                neighbor_id = room_at_coord.get((x + dx, y + dy))
+                if neighbor_id is not None:
+                    assert room.exits.get(direction) == neighbor_id
