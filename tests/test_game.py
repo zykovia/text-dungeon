@@ -217,7 +217,8 @@ def test_class_determines_starting_stats_and_gear():
     assert game.player.player_class == "Wizard"
     assert game.player.hp == game.player.max_hp == 16
     assert game.player.attack == 2
-    assert any(item.name == "apprentice staff" for item in game.player.inventory)
+    assert game.player.main_hand.name == "apprentice staff"
+    assert game.player.off_hand.name == "spellbook"
 
 
 def test_class_with_no_name_falls_back_to_the_class_default_name():
@@ -232,3 +233,72 @@ def test_player_name_can_be_chosen():
 
     assert game.player.name == "Gandalf"
     assert game.status()["name"] == "Gandalf"
+
+
+def test_equip_swaps_into_occupied_slot_and_returns_old_item_to_inventory():
+    game = Game(seed=1, player_class="Warrior")
+    old_weapon = game.player.main_hand
+    new_weapon = Item(
+        "steel sword", "A sharper blade.", damage_bonus=4, player_class="Warrior", slot="main_hand"
+    )
+    game.player.inventory.append(new_weapon)
+
+    game.equip("steel sword")
+
+    assert game.player.main_hand is new_weapon
+    assert old_weapon in game.player.inventory
+    assert new_weapon not in game.player.inventory
+
+
+def test_equip_refuses_non_equippable_item():
+    game = Game(seed=1, player_class="Warrior")
+    game.player.inventory.append(Item("health potion", "Mends wounds.", heal=8))
+
+    game.equip("health potion")
+
+    assert game.player.main_hand.name != "health potion"
+    assert any(item.name == "health potion" for item in game.player.inventory)
+    assert "You can't equip the health potion." in game.pop_output()
+
+
+def test_equip_already_equipped_item_is_a_no_op():
+    game = Game(seed=1, player_class="Warrior")
+
+    game.equip("rusty sword")
+
+    assert game.player.main_hand.name == "rusty sword"
+    assert "You already have the rusty sword equipped." in game.pop_output()
+
+
+def test_equip_missing_item_reports_not_carried():
+    game = Game(seed=1, player_class="Warrior")
+
+    game.equip("magic wand")
+
+    assert "You don't have a 'magic wand'." in game.pop_output()
+
+
+def test_unequip_moves_item_back_to_inventory():
+    game = Game(seed=1, player_class="Warrior")
+
+    game.unequip("rusty sword")
+
+    assert game.player.main_hand is None
+    assert any(item.name == "rusty sword" for item in game.player.inventory)
+
+
+def test_unequip_not_equipped_reports_distinct_message():
+    game = Game(seed=1, player_class="Warrior")
+
+    game.unequip("magic wand")
+
+    assert "You don't have 'magic wand' equipped." in game.pop_output()
+
+
+def test_status_includes_equipment():
+    game = Game(seed=1, player_class="Warrior")
+
+    equipment = game.status()["equipment"]
+
+    assert equipment["main_hand"]["name"] == "rusty sword"
+    assert equipment["off_hand"]["name"] == "wooden shield"

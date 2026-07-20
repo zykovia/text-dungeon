@@ -12,7 +12,9 @@ Commands:
   go <direction>   move north/south/east/west (n/s/e/w)
   look             describe the current room
   take <item>      pick up an item
-  inventory (i)    show what you're carrying
+  inventory (i)    show what you're carrying and wielding
+  equip <item>     wield an item from your inventory
+  unequip <item>   put a wielded item back in your inventory
   attack           attack the monster in the room
   use <item>       use an item from your inventory
   map (m)          show a map of rooms you've explored
@@ -55,6 +57,20 @@ def _cmd_use(game: Game, arg: str) -> None:
     game.use(arg)
 
 
+def _cmd_equip(game: Game, arg: str) -> None:
+    if not arg:
+        game.emit("Equip what?")
+        return
+    game.equip(arg)
+
+
+def _cmd_unequip(game: Game, arg: str) -> None:
+    if not arg:
+        game.emit("Unequip what?")
+        return
+    game.unequip(arg)
+
+
 def _cmd_help(game: Game, arg: str) -> None:
     for line in HELP_TEXT.splitlines():
         game.emit(line)
@@ -82,6 +98,8 @@ COMMANDS: dict[str, Callable[[Game, str], None]] = {
     "inv": _cmd_inventory,
     "attack": _cmd_attack,
     "use": _cmd_use,
+    "equip": _cmd_equip,
+    "unequip": _cmd_unequip,
     "help": _cmd_help,
     "quit": _cmd_quit,
     "map": _cmd_map,

@@ -104,21 +104,21 @@ body {
   overflow-x: auto;
 }
 
-#inventory-list {
+#inventory-list, #equipment-list {
   list-style: none;
   margin: 0;
   padding: 0;
   font-size: 13px;
 }
 
-#inventory-list li {
+#inventory-list li, #equipment-list li {
   display: flex;
   flex-direction: column;
   padding: 6px 0;
   border-top: 1px solid #145214;
 }
 
-#inventory-list li:first-child {
+#inventory-list li:first-child, #equipment-list li:first-child {
   border-top: none;
 }
 

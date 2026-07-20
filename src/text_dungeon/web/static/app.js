@@ -9,6 +9,7 @@ const levelText = document.getElementById("level-text");
 const xpText = document.getElementById("xp-text");
 const dungeonText = document.getElementById("dungeon-text");
 const mapDisplay = document.getElementById("map-display");
+const equipmentList = document.getElementById("equipment-list");
 const inventoryList = document.getElementById("inventory-list");
 
 const classSelect = document.getElementById("class-select");
@@ -59,6 +60,25 @@ function renderStatus(status) {
 
   mapDisplay.textContent = formatMapLines(status.map_lines) || "You haven't explored anywhere yet.";
 
+  function itemRow(label, item) {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "item-name";
+    name.textContent = label ? `${label}: ${item ? item.name : "(empty)"}` : item.name;
+    li.appendChild(name);
+    if (item) {
+      const desc = document.createElement("span");
+      desc.className = "item-desc";
+      desc.textContent = item.description;
+      li.appendChild(desc);
+    }
+    return li;
+  }
+
+  equipmentList.innerHTML = "";
+  equipmentList.appendChild(itemRow("Main hand", status.equipment.main_hand));
+  equipmentList.appendChild(itemRow("Off hand", status.equipment.off_hand));
+
   inventoryList.innerHTML = "";
   if (status.inventory.length === 0) {
     const empty = document.createElement("li");
@@ -67,16 +87,7 @@ function renderStatus(status) {
     inventoryList.appendChild(empty);
   } else {
     status.inventory.forEach((item) => {
-      const li = document.createElement("li");
-      const name = document.createElement("span");
-      name.className = "item-name";
-      name.textContent = item.name;
-      const desc = document.createElement("span");
-      desc.className = "item-desc";
-      desc.textContent = item.description;
-      li.appendChild(name);
-      li.appendChild(desc);
-      inventoryList.appendChild(li);
+      inventoryList.appendChild(itemRow(null, item));
     });
   }
 }

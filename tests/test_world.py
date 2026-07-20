@@ -103,18 +103,27 @@ def test_generate_dungeon_places_super_boss_when_final():
     assert _boss_monster_room(rooms).monster.name == SUPER_BOSS.monster_name
 
 
-def test_generate_dungeon_spawned_items_keep_their_class_restriction():
-    # A randomly-spawned "rusty sword" etc. must stay Warrior-only; dropping
-    # player_class here would let any class pick up and wield class gear.
-    class_restricted = {t.name: t.player_class for t in ITEM_TEMPLATES if t.player_class}
+def test_generate_dungeon_spawned_items_match_their_template():
+    # A spawned item must carry over every field from its ItemTemplate (not
+    # just player_class): dropping any one of them here silently strips that
+    # property from randomly-spawned items, as happened once before when
+    # player_class alone was forgotten in this construction site.
+    templates_by_name = {t.name: t for t in ITEM_TEMPLATES}
     checked_any = False
     for seed in range(50):
         rooms = generate_dungeon(seed=seed, min_rooms=18, max_rooms=22)
         for room in rooms.values():
             for item in room.items:
-                if item.name in class_restricted:
-                    checked_any = True
-                    assert item.player_class == class_restricted[item.name]
+                if item.name not in templates_by_name:
+                    continue  # the golden crown is spawned separately, not from ITEM_TEMPLATES
+                template = templates_by_name[item.name]
+                checked_any = True
+                assert item.description == template.description
+                assert item.heal == template.heal
+                assert item.damage_bonus == template.damage_bonus
+                assert item.player_class == template.player_class
+                assert item.slot == template.slot
+                assert item.defense_bonus == template.defense_bonus
     assert checked_any
 
 

@@ -34,6 +34,23 @@ def test_save_and_load_round_trips_player_state(tmp_path):
     assert any(item.name == "bandage" for item in restored.player.inventory)
 
 
+def test_save_and_load_round_trips_equipped_gear(tmp_path):
+    game = Game(seed=1, player_class="Warrior")
+
+    save_game("player-1b", game, save_dir=tmp_path)
+    restored = load_game("player-1b", save_dir=tmp_path)
+
+    assert restored.player.main_hand.name == "rusty sword"
+    assert restored.player.off_hand.name == "wooden shield"
+
+    restored.unequip("rusty sword")
+    save_game("player-1b", restored, save_dir=tmp_path)
+    restored_again = load_game("player-1b", save_dir=tmp_path)
+
+    assert restored_again.player.main_hand is None
+    assert any(item.name == "rusty sword" for item in restored_again.player.inventory)
+
+
 def test_save_and_load_round_trips_room_and_monster_state(tmp_path):
     game = Game(seed=1)
     room = game.current_room()

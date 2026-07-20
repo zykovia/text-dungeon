@@ -16,13 +16,16 @@ class AttackResult:
 
 def resolve_attack(player: Player, monster: Monster) -> AttackResult:
     """Apply one round of the player attacking `monster`, mutating both in place."""
-    bonus = sum(item.damage_bonus for item in player.inventory)
+    equipped = [item for item in (player.main_hand, player.off_hand) if item]
+    bonus = sum(item.damage_bonus for item in equipped)
+    defense = sum(item.defense_bonus for item in equipped)
+
     damage = player.attack + bonus + random.randint(*ATTACK_DAMAGE_ROLL)
     monster.hp -= damage
 
     if not monster.alive:
         return AttackResult(damage_dealt=damage, monster_defeated=True)
 
-    incoming = max(0, monster.attack + random.randint(*INCOMING_DAMAGE_ROLL))
+    incoming = max(0, monster.attack + random.randint(*INCOMING_DAMAGE_ROLL) - defense)
     player.hp -= incoming
     return AttackResult(damage_dealt=damage, monster_defeated=False, incoming_damage=incoming)

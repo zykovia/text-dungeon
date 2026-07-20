@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from .items import item_from_template
 from .models import Item, Player
-from .templates import CLASS_TEMPLATES, ITEM_TEMPLATES, ClassTemplate
+from .templates import CLASS_TEMPLATES, ITEM_TEMPLATES, ClassTemplate, ItemTemplate
 
 DEFAULT_PLAYER_CLASS = CLASS_TEMPLATES[0].name
 CLASS_NAMES = [template.name for template in CLASS_TEMPLATES]
@@ -14,15 +15,12 @@ def _class_template(player_class: str) -> ClassTemplate:
     raise ValueError(f"Unknown class: {player_class!r}")
 
 
-def _starting_item(class_template: ClassTemplate) -> Item:
-    item_template = next(t for t in ITEM_TEMPLATES if t.name == class_template.starting_item)
-    return Item(
-        item_template.name,
-        item_template.description,
-        heal=item_template.heal,
-        damage_bonus=item_template.damage_bonus,
-        player_class=item_template.player_class,
-    )
+def _item_template(item_name: str) -> ItemTemplate:
+    return next(t for t in ITEM_TEMPLATES if t.name == item_name)
+
+
+def _starting_item(item_name: str) -> Item:
+    return item_from_template(_item_template(item_name))
 
 
 def default_name_for_class(player_class: str) -> str:
@@ -42,5 +40,6 @@ def create_player(player_class: str, name: str | None = None) -> Player:
         hp=template.starting_hp,
         max_hp=template.starting_hp,
         attack=template.starting_attack,
-        inventory=[_starting_item(template)],
+        main_hand=_starting_item(template.starting_item),
+        off_hand=_starting_item(template.starting_offhand_item),
     )

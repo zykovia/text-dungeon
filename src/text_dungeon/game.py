@@ -8,7 +8,7 @@ from .commands import handle_command as dispatch_command
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
 from .minimap import compute_coords
 from .minimap import render_map as build_map_lines
-from .models import Player, Room
+from .models import Item, Player, Room
 from .templates import BOSS, SUPER_BOSS, WIN_ITEM_NAME
 from .world import generate_dungeon, is_final_dungeon, room_count_range
 
@@ -160,11 +160,48 @@ class Game:
         self.emit(f"There's no '{item_name}' here.")
 
     def show_inventory(self) -> None:
+        self.emit(f"Main hand: {self._equipped_line(self.player.main_hand)}")
+        self.emit(f"Off hand: {self._equipped_line(self.player.off_hand)}")
         if not self.player.inventory:
-            self.emit("You aren't carrying anything.")
+            self.emit("You aren't carrying anything else.")
             return
         for item in self.player.inventory:
             self.emit(f"- {item.name}: {item.description}")
+
+    def _equipped_line(self, item: Item | None) -> str:
+        return f"{item.name} ({item.description})" if item else "(empty)"
+
+    def equip(self, item_name: str) -> None:
+        if self.player.main_hand and self.player.main_hand.name == item_name:
+            self.emit(f"You already have the {item_name} equipped.")
+            return
+        if self.player.off_hand and self.player.off_hand.name == item_name:
+            self.emit(f"You already have the {item_name} equipped.")
+            return
+
+        for item in self.player.inventory:
+            if item.name == item_name:
+                if item.slot is None:
+                    self.emit(f"You can't equip the {item.name}.")
+                    return
+                previous = getattr(self.player, item.slot)
+                if previous is not None:
+                    self.player.inventory.append(previous)
+                self.player.inventory.remove(item)
+                setattr(self.player, item.slot, item)
+                self.emit(f"You equip the {item.name}.")
+                return
+        self.emit(f"You don't have a '{item_name}'.")
+
+    def unequip(self, item_name: str) -> None:
+        for slot in ("main_hand", "off_hand"):
+            item = getattr(self.player, slot)
+            if item is not None and item.name == item_name:
+                setattr(self.player, slot, None)
+                self.player.inventory.append(item)
+                self.emit(f"You unequip the {item.name}.")
+                return
+        self.emit(f"You don't have '{item_name}' equipped.")
 
     def current_dungeon_history(self) -> list[str]:
         return history.current_dungeon_history(self.player)
@@ -241,12 +278,19 @@ class Game:
             "xp_per_level": XP_PER_LEVEL,
             "dungeon_level": self.player.dungeon_level,
             "max_dungeon_level": MAX_DUNGEON_LEVEL,
+            "equipment": {
+                "main_hand": self._item_summary(self.player.main_hand),
+                "off_hand": self._item_summary(self.player.off_hand),
+            },
             "inventory": [
                 {"name": item.name, "description": item.description}
                 for item in self.player.inventory
             ],
             "map_lines": self._map_lines(),
         }
+
+    def _item_summary(self, item: Item | None) -> dict | None:
+        return {"name": item.name, "description": item.description} if item else None
 
     def win(self) -> None:
         self.emit(
