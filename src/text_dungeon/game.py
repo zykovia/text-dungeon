@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from . import history
 from .balance import MAX_DUNGEON_LEVEL
+from .character import DEFAULT_PLAYER_CLASS, create_player
 from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
@@ -20,9 +21,10 @@ class Game:
         player: Player | None = None,
         rooms: dict[str, Room] | None = None,
         running: bool = True,
+        player_class: str | None = None,
     ) -> None:
         """Start a fresh dungeon, or, if `player`/`rooms` are given, resume a saved one."""
-        self.player = player or Player(name="Adventurer")
+        self.player = player or create_player(player_class or DEFAULT_PLAYER_CLASS)
         if rooms is not None:
             self.rooms = rooms
             self.coords = compute_coords(self.rooms)
@@ -137,6 +139,9 @@ class Game:
         room = self.current_room()
         for item in room.items:
             if item.name == item_name:
+                if item.player_class is not None and item.player_class != self.player.player_class:
+                    self.emit(f"Only a {item.player_class} can wield the {item.name}.")
+                    return
                 room.items.remove(item)
                 self.player.inventory.append(item)
                 self.emit(f"You take the {item.name}.")
@@ -228,6 +233,7 @@ class Game:
         return {
             "hp": self.player.hp,
             "max_hp": self.player.max_hp,
+            "player_class": self.player.player_class,
             "level": self.player.level,
             "xp": self.player.xp,
             "xp_per_level": XP_PER_LEVEL,

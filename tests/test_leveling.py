@@ -32,7 +32,7 @@ def test_xp_for_kill_regular_boss_when_super_boss_name_also_given():
 
 
 def test_gain_xp_below_threshold_no_level_up():
-    player = Player(name="Hero")
+    player = Player(name="Hero", player_class="Warrior")
     level_ups = gain_xp(player, XP_PER_LEVEL - 1)
     assert level_ups == []
     assert player.level == 1
@@ -40,7 +40,7 @@ def test_gain_xp_below_threshold_no_level_up():
 
 
 def test_gain_xp_triggers_level_up_and_heals():
-    player = Player(name="Hero")
+    player = Player(name="Hero", player_class="Warrior")
     player.hp = 1
     level_ups = gain_xp(player, XP_PER_LEVEL)
     assert len(level_ups) == 1
@@ -51,7 +51,7 @@ def test_gain_xp_triggers_level_up_and_heals():
 
 
 def test_gain_xp_overflow_carries_remainder_and_can_multi_level():
-    player = Player(name="Hero")
+    player = Player(name="Hero", player_class="Warrior")
     level_ups = gain_xp(player, XP_PER_LEVEL * 2 + 3)
     assert [level_up.level for level_up in level_ups] == [2, 3]
     assert player.level == 3

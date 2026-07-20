@@ -174,3 +174,46 @@ def test_show_history_does_not_duplicate_itself_on_repeat_calls():
     game.pop_output()
 
     assert game.player.history == before
+
+
+def test_take_blocked_for_wrong_class_item_stays_in_room():
+    game = Game(seed=1, player_class="Warrior")
+    game.current_room().items.append(
+        Item("apprentice staff", "A gnarled staff.", damage_bonus=3, player_class="Wizard")
+    )
+
+    game.take("apprentice staff")
+
+    assert not any(item.name == "apprentice staff" for item in game.player.inventory)
+    assert any(item.name == "apprentice staff" for item in game.current_room().items)
+    assert "Only a Wizard can wield the apprentice staff." in game.pop_output()
+
+
+def test_take_allowed_for_matching_class_item():
+    game = Game(seed=1, player_class="Wizard")
+    game.current_room().items.append(
+        Item("apprentice staff", "A gnarled staff.", damage_bonus=3, player_class="Wizard")
+    )
+
+    game.take("apprentice staff")
+
+    assert any(item.name == "apprentice staff" for item in game.player.inventory)
+    assert not any(item.name == "apprentice staff" for item in game.current_room().items)
+
+
+def test_take_allowed_for_class_agnostic_item():
+    game = Game(seed=1, player_class="Cleric")
+    game.current_room().items.append(Item("health potion", "Mends wounds.", heal=8))
+
+    game.take("health potion")
+
+    assert any(item.name == "health potion" for item in game.player.inventory)
+
+
+def test_class_determines_starting_stats_and_gear():
+    game = Game(player_class="Wizard")
+
+    assert game.player.player_class == "Wizard"
+    assert game.player.hp == game.player.max_hp == 16
+    assert game.player.attack == 2
+    assert any(item.name == "apprentice staff" for item in game.player.inventory)

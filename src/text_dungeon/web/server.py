@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ..game import Game
 from ..persistence import delete_save, load_game, save_game
+from ..templates import CLASS_TEMPLATES
 
 STATIC_DIR = Path(__file__).parent / "static"
 PLAYER_ID_COOKIE = "player_id"
@@ -32,7 +33,23 @@ async def index(player_id: str | None = Cookie(default=None)) -> FileResponse:
     return response
 
 
-def _resume_or_start(player_id: str | None) -> Game:
+async def _choose_class(websocket: WebSocket) -> str:
+    await websocket.send_json(
+        {
+            "type": "class_select",
+            "options": [
+                {"name": t.name, "description": t.description} for t in CLASS_TEMPLATES
+            ],
+        }
+    )
+    choice = (await websocket.receive_text()).strip()
+    return next(
+        (t.name for t in CLASS_TEMPLATES if t.name.lower() == choice.lower()),
+        CLASS_TEMPLATES[0].name,
+    )
+
+
+async def _resume_or_start(websocket: WebSocket, player_id: str | None) -> Game:
     if player_id is not None:
         try:
             saved = load_game(player_id)
@@ -43,7 +60,8 @@ def _resume_or_start(player_id: str | None) -> Game:
             saved.output.extend(saved.current_dungeon_history())
             saved.look()
             return saved
-    game = Game()
+    player_class = await _choose_class(websocket)
+    game = Game(player_class=player_class)
     game.intro()
     return game
 
@@ -51,7 +69,7 @@ def _resume_or_start(player_id: str | None) -> Game:
 @app.websocket("/ws")
 async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None)) -> None:
     await websocket.accept()
-    game = _resume_or_start(player_id)
+    game = await _resume_or_start(websocket, player_id)
     player_id = player_id or str(uuid.uuid4())
 
     await websocket.send_json(

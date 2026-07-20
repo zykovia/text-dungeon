@@ -4,11 +4,15 @@ const form = document.getElementById("input-line");
 
 const hpFill = document.getElementById("hp-fill");
 const hpText = document.getElementById("hp-text");
+const classText = document.getElementById("class-text");
 const levelText = document.getElementById("level-text");
 const xpText = document.getElementById("xp-text");
 const dungeonText = document.getElementById("dungeon-text");
 const mapDisplay = document.getElementById("map-display");
 const inventoryList = document.getElementById("inventory-list");
+
+const classSelect = document.getElementById("class-select");
+const classOptions = document.getElementById("class-options");
 
 const sidebar = document.getElementById("sidebar");
 const sidebarBackdrop = document.getElementById("sidebar-backdrop");
@@ -41,6 +45,7 @@ function renderStatus(status) {
   hpFill.classList.toggle("low", hpRatio <= 0.3);
   hpText.textContent = `${status.hp}/${status.max_hp}`;
 
+  classText.textContent = status.player_class || "";
   levelText.textContent = status.level;
   xpText.textContent = `${status.xp}/${status.xp_per_level}`;
   dungeonText.textContent = `${status.dungeon_level}/${status.max_dungeon_level}`;
@@ -67,6 +72,32 @@ function renderStatus(status) {
       inventoryList.appendChild(li);
     });
   }
+}
+
+function showClassSelect(options, onChoose) {
+  input.disabled = true;
+  classOptions.innerHTML = "";
+  options.forEach((option) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "class-option";
+    const name = document.createElement("span");
+    name.className = "class-option-name";
+    name.textContent = option.name;
+    const desc = document.createElement("span");
+    desc.className = "class-option-desc";
+    desc.textContent = option.description;
+    button.appendChild(name);
+    button.appendChild(desc);
+    button.addEventListener("click", () => {
+      onChoose(option.name);
+      classSelect.classList.add("hidden");
+      input.disabled = false;
+      input.focus();
+    });
+    classOptions.appendChild(button);
+  });
+  classSelect.classList.remove("hidden");
 }
 
 // Tracks the real visible viewport (excluding an open on-screen keyboard) so
@@ -108,6 +139,10 @@ function connect() {
 
   socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
+    if (data.type === "class_select") {
+      showClassSelect(data.options, (chosenName) => socket.send(chosenName));
+      return;
+    }
     appendLines(data.lines);
     renderStatus(data.status);
     if (data.game_over) {

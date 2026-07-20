@@ -6,6 +6,7 @@ from .item import Item
 @dataclass
 class Player:
     name: str
+    player_class: str
     hp: int = 20
     max_hp: int = 20
     attack: int = 3

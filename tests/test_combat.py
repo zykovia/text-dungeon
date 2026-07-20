@@ -3,7 +3,7 @@ from text_dungeon.models import Item, Monster, Player
 
 
 def test_resolve_attack_damages_monster():
-    player = Player(name="Hero")
+    player = Player(name="Hero", player_class="Warrior")
     monster = Monster("goblin", hp=20, attack=1)
     result = resolve_attack(player, monster)
     assert result.damage_dealt > 0
@@ -11,7 +11,7 @@ def test_resolve_attack_damages_monster():
 
 
 def test_resolve_attack_applies_weapon_bonus():
-    player = Player(name="Hero")
+    player = Player(name="Hero", player_class="Warrior")
     player.inventory.append(Item("sword", "A blade.", damage_bonus=100))
     monster = Monster("goblin", hp=1000, attack=0)
     result = resolve_attack(player, monster)
@@ -19,7 +19,7 @@ def test_resolve_attack_applies_weapon_bonus():
 
 
 def test_resolve_attack_defeats_monster_without_retaliation():
-    player = Player(name="Hero")
+    player = Player(name="Hero", player_class="Warrior")
     monster = Monster("goblin", hp=1, attack=50)
     result = resolve_attack(player, monster)
     assert result.monster_defeated is True
@@ -28,7 +28,7 @@ def test_resolve_attack_defeats_monster_without_retaliation():
 
 
 def test_resolve_attack_survivor_retaliates():
-    player = Player(name="Hero", attack=0)
+    player = Player(name="Hero", player_class="Warrior", attack=0)
     monster = Monster("goblin", hp=1000, attack=5)
     start_hp = player.hp
     result = resolve_attack(player, monster)

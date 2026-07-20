@@ -1,8 +1,22 @@
 from .game import Game
+from .templates import CLASS_TEMPLATES
+
+
+def _prompt_for_class() -> str:
+    print("Choose your class:")
+    for i, template in enumerate(CLASS_TEMPLATES, start=1):
+        print(f"  {i}) {template.name} - {template.description}")
+    while True:
+        choice = input("> ").strip()
+        for i, template in enumerate(CLASS_TEMPLATES, start=1):
+            if choice == str(i) or choice.lower() == template.name.lower():
+                return template.name
+        print("Not a valid choice, try again.")
 
 
 def main() -> None:
-    Game().run()
+    player_class = _prompt_for_class()
+    Game(player_class=player_class).run()
 
 
 if __name__ == "__main__":

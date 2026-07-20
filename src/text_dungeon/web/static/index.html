@@ -12,6 +12,7 @@
     <aside id="sidebar" aria-label="Player status">
       <div class="panel" id="stats-panel">
         <h2>Adventurer</h2>
+        <div id="class-text" class="stat-row"></div>
         <div class="stat">
           <span class="stat-label">HP</span>
           <div class="bar"><div id="hp-fill" class="bar-fill"></div></div>
@@ -35,6 +36,12 @@
       </div>
     </aside>
     <div id="sidebar-backdrop"></div>
+    <div id="class-select" class="hidden" aria-label="Choose your class">
+      <div class="panel" id="class-select-panel">
+        <h2>Choose your class</h2>
+        <div id="class-options"></div>
+      </div>
+    </div>
     <div id="terminal">
       <div id="titlebar">
         <button id="sidebar-toggle" type="button" aria-label="Toggle player status">&#9776;</button>

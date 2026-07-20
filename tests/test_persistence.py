@@ -14,9 +14,9 @@ def test_load_game_with_no_save_returns_none(tmp_path):
 
 
 def test_save_and_load_round_trips_player_state(tmp_path):
-    game = Game(seed=1)
-    game.current_room().items.append(Item("rusty sword", "A worn blade.", damage_bonus=2))
-    game.take("rusty sword")
+    game = Game(seed=1, player_class="Warrior")
+    game.current_room().items.append(Item("bandage", "Rough cloth.", heal=4))
+    game.take("bandage")
     game.move(next(iter(game.current_room().exits)))
     game.player.level = 3
     game.player.xp = 4
@@ -28,9 +28,10 @@ def test_save_and_load_round_trips_player_state(tmp_path):
     assert restored.player.level == 3
     assert restored.player.xp == 4
     assert restored.player.hp == 11
+    assert restored.player.player_class == "Warrior"
     assert restored.player.current_room == game.player.current_room
     assert restored.player.visited == game.player.visited
-    assert any(item.name == "rusty sword" for item in restored.player.inventory)
+    assert any(item.name == "bandage" for item in restored.player.inventory)
 
 
 def test_save_and_load_round_trips_room_and_monster_state(tmp_path):
