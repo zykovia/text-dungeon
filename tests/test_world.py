@@ -13,6 +13,10 @@ def _crown_rooms(rooms):
     ]
 
 
+def _auto_advance_rooms(rooms):
+    return [room for room in rooms.values() if room.auto_advance]
+
+
 _BOSS_MONSTER_NAMES = {BOSS.monster_name, SUPER_BOSS.monster_name}
 
 
@@ -45,11 +49,12 @@ def test_generate_dungeon_exits_are_reciprocal():
 
 
 def test_generate_dungeon_has_exactly_one_win_condition():
-    rooms = generate_dungeon(seed=42)
+    # Only the final dungeon's boss guards an actual crown to take.
+    rooms = generate_dungeon(seed=42, final_boss=True)
     crown_rooms = _crown_rooms(rooms)
     assert len(crown_rooms) == 1
     boss_room = _boss_monster_room(rooms)
-    assert boss_room.monster.name == "Dungeon Lord"
+    assert boss_room.monster.name == SUPER_BOSS.monster_name
 
 
 def test_generate_dungeon_crown_room_is_guarded_by_the_boss():
@@ -57,12 +62,29 @@ def test_generate_dungeon_crown_room_is_guarded_by_the_boss():
     # grab it and skip the fight: it lives alone in a vault whose only exit
     # leads back to the room holding the boss monster.
     for seed in range(20):
-        rooms = generate_dungeon(seed=seed)
+        rooms = generate_dungeon(seed=seed, final_boss=True)
         crown_room = _crown_rooms(rooms)[0]
         assert crown_room.monster is None
         assert len(crown_room.items) == 1
         assert len(crown_room.exits) == 1
         boss_id = next(iter(crown_room.exits.values()))
+        assert rooms[boss_id].monster is not None
+
+
+def test_generate_dungeon_regular_boss_vault_auto_advances_with_no_items():
+    # A regular (non-final) boss has nothing to collect: its vault carries
+    # the win condition as an auto_advance flag instead of an item, so
+    # nothing piles up in inventory as the player clears dungeon after
+    # dungeon.
+    for seed in range(20):
+        rooms = generate_dungeon(seed=seed)
+        vault_rooms = _auto_advance_rooms(rooms)
+        assert len(vault_rooms) == 1
+        vault_room = vault_rooms[0]
+        assert vault_room.items == []
+        assert vault_room.monster is None
+        assert len(vault_room.exits) == 1
+        boss_id = next(iter(vault_room.exits.values()))
         assert rooms[boss_id].monster is not None
 
 

@@ -12,3 +12,4 @@ class Room:
     exits: dict[str, str] = field(default_factory=dict)
     items: list[Item] = field(default_factory=list)
     monster: Monster | None = None
+    auto_advance: bool = False

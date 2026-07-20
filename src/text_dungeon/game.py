@@ -144,6 +144,13 @@ class Game:
             self.emit("You can't go that way.")
             return
         self.player.current_room = destination
+        destination_room = self.rooms[destination]
+        if destination_room.auto_advance:
+            self.emit("")
+            self.emit(f"== {destination_room.name} ==")
+            self.emit(destination_room.description)
+            self.advance()
+            return
         self.look()
 
     def take(self, item_name: str) -> None:
@@ -172,11 +179,16 @@ class Game:
     def show_inventory(self) -> None:
         self.emit(f"Main hand: {self._equipped_line(self.player.main_hand)}")
         self.emit(f"Off hand: {self._equipped_line(self.player.off_hand)}")
-        if not self.player.inventory:
+        active = [item for item in self.player.inventory if not item.retired]
+        retired = [item for item in self.player.inventory if item.retired]
+        if not active and not retired:
             self.emit("You aren't carrying anything else.")
             return
-        for item in self.player.inventory:
+        for item in active:
             self.emit(f"- {self._item_label(item)}: {item.description}")
+        if retired:
+            names = ", ".join(item.name for item in retired)
+            self.emit(f"- Old gear ({len(retired)}): {names}")
 
     def _equipped_line(self, item: Item | None) -> str:
         return f"{self._item_label(item)}: {item.description}" if item else "(empty)"
@@ -201,7 +213,9 @@ class Game:
                     return
                 previous = getattr(self.player, item.slot)
                 if previous is not None:
+                    previous.retired = True
                     self.player.inventory.append(previous)
+                item.retired = False
                 self.player.inventory.remove(item)
                 setattr(self.player, item.slot, item)
                 self.emit(f"You equip the {self._item_label(item)}.")
@@ -251,6 +265,8 @@ class Game:
                 )
                 if level_up.skill_learned:
                     self.emit(f"You've learned {level_up.skill_learned}!")
+            if room.auto_advance:
+                self.advance()
             return
 
         self.emit(
@@ -342,7 +358,9 @@ class Game:
                     "effect": item.effect_summary(),
                 }
                 for item in self.player.inventory
+                if not item.retired
             ],
+            "old_gear": [item.name for item in self.player.inventory if item.retired],
             "skills": [
                 {
                     "name": skill.name,

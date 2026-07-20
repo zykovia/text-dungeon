@@ -7,9 +7,9 @@ class BossTemplate:
     room_name: str
     room_description: str
     monster_description: str
-    crown_description: str
     vault_room_name: str
     vault_room_description: str
+    crown_description: str | None = None
 
 
 BOSS = BossTemplate(
@@ -17,10 +17,10 @@ BOSS = BossTemplate(
     room_name="Throne of the Dungeon Lord",
     room_description="A massive figure sits upon a throne of bones, waiting.",
     monster_description="The master of this dungeon, clad in black iron.",
-    crown_description="The Dungeon Lord's crown. Proof of your victory.",
-    vault_room_name="Vault of the Dungeon Lord",
+    vault_room_name="Stairs Beyond the Throne",
     vault_room_description=(
-        "Behind the throne, a small chamber holds the fallen lord's treasure."
+        "Behind the throne, a stone stairway spirals down into darkness, "
+        "deeper into the dungeon."
     ),
 )
 

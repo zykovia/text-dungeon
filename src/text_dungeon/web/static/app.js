@@ -122,7 +122,7 @@ function renderStatus(status) {
   }
 
   inventoryList.innerHTML = "";
-  if (status.inventory.length === 0) {
+  if (status.inventory.length === 0 && status.old_gear.length === 0) {
     const empty = document.createElement("li");
     empty.className = "empty";
     empty.textContent = "Nothing yet.";
@@ -131,6 +131,18 @@ function renderStatus(status) {
     status.inventory.forEach((item) => {
       inventoryList.appendChild(itemRow(null, item));
     });
+    if (status.old_gear.length > 0) {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.className = "item-name";
+      name.textContent = `Old gear (${status.old_gear.length})`;
+      li.appendChild(name);
+      const desc = document.createElement("span");
+      desc.className = "item-desc";
+      desc.textContent = status.old_gear.join(", ");
+      li.appendChild(desc);
+      inventoryList.appendChild(li);
+    }
   }
 }
 

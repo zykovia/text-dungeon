@@ -211,12 +211,14 @@ def generate_dungeon(
             attack=rng.randint(*BOSS_ATTACK_RANGE),
             description=BOSS.monster_description,
         )
-        crown_description = BOSS.crown_description
         vault_name = BOSS.vault_room_name
         vault_description = BOSS.vault_room_description
 
-    # The crown lives in its own vault beyond the boss chamber, so the only
-    # way to reach it is to walk through (and thus defeat) the boss first.
+    # The final boss's vault holds the crown, the win condition, reachable
+    # only by walking through (and thus defeating) the boss first. An
+    # ordinary boss's vault instead auto-advances the player to the next
+    # dungeon on entry: there's nothing to collect, so nothing piles up in
+    # inventory along the way.
     if vault_coord is not None:
         vault_id = f"room_{next_id}"
         next_id += 1
@@ -226,11 +228,17 @@ def generate_dungeon(
         rooms[vault_id] = vault_room
         coords[vault_id] = vault_coord
         room_at_coord[vault_coord] = vault_id
-        vault_room.items = [Item(WIN_ITEM_NAME, crown_description)]
+        if final_boss:
+            vault_room.items = [Item(WIN_ITEM_NAME, crown_description)]
+        else:
+            vault_room.auto_advance = True
     else:
         # Every adjacent cell was occupied; fall back to the old behavior.
         vault_id = None
-        boss_room.items = [Item(WIN_ITEM_NAME, crown_description)]
+        if final_boss:
+            boss_room.items = [Item(WIN_ITEM_NAME, crown_description)]
+        else:
+            boss_room.auto_advance = True
 
     other_ids = [
         room_id for room_id in rooms if room_id not in ("entrance", boss_id, vault_id)

@@ -11,6 +11,7 @@ class Item:
     slot: str | None = None
     defense_bonus: int = 0
     tier: int = 1
+    retired: bool = False
 
     def effect_summary(self) -> str:
         """Player-facing summary of this item's mechanical effect, if any."""

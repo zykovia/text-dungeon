@@ -138,6 +138,24 @@ def test_taking_the_crown_below_max_dungeon_level_advances():
     assert game.player.dungeon_level == MAX_DUNGEON_LEVEL
 
 
+def test_entering_a_regular_boss_vault_auto_advances_with_nothing_to_take():
+    # Regular (non-final) dungeons have no crown to collect: walking into
+    # the vault beyond the boss immediately advances the player, so nothing
+    # ever lands in inventory from clearing an ordinary dungeon.
+    game = Game(seed=1)
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    boss_id = next(iter(vault_room.exits.values()))
+    game.rooms[boss_id].monster = None  # boss already defeated
+    game.player.current_room = boss_id
+
+    direction = next(d for d, dest in game.rooms[boss_id].exits.items() if dest == vault_room.id)
+    game.move(direction)
+
+    assert game.player.dungeon_level == 2
+    assert game.player.current_room == "entrance"
+    assert game.player.inventory == []
+
+
 def test_history_records_moves_looks_and_attacks():
     game = Game(seed=1)
     game.current_room().monster = Monster("test monster", hp=5, attack=1)
@@ -248,6 +266,40 @@ def test_equip_swaps_into_occupied_slot_and_returns_old_item_to_inventory():
     assert game.player.main_hand is new_weapon
     assert old_weapon in game.player.inventory
     assert new_weapon not in game.player.inventory
+
+
+def test_equip_retires_the_displaced_item_and_reactivates_the_new_one():
+    # A weapon bumped out of its slot is flagged "retired" so it collapses
+    # into a compact "Old gear" summary instead of cluttering the inventory
+    # list; re-equipping it should clear that flag again.
+    game = Game(seed=1, player_class="Warrior")
+    old_weapon = game.player.main_hand
+    new_weapon = Item(
+        "steel sword", "A sharper blade.", damage_bonus=4, player_class="Warrior", slot="main_hand"
+    )
+    new_weapon.retired = True
+    game.player.inventory.append(new_weapon)
+
+    game.equip("steel sword")
+
+    assert old_weapon.retired is True
+    assert new_weapon.retired is False
+
+
+def test_show_inventory_collapses_retired_gear_into_one_line():
+    game = Game(seed=1, player_class="Warrior")
+    new_weapon = Item(
+        "steel sword", "A sharper blade.", damage_bonus=4, player_class="Warrior", slot="main_hand"
+    )
+    game.player.inventory.append(new_weapon)
+    game.equip("steel sword")
+    game.pop_output()
+
+    game.show_inventory()
+    lines = game.pop_output()
+
+    assert any(line.startswith("- Old gear (1): rusty sword") for line in lines)
+    assert not any(line.startswith("- rusty sword") for line in lines)
 
 
 def test_equip_refuses_non_equippable_item():
