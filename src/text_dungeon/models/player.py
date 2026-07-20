@@ -26,6 +26,7 @@ class Player:
     dungeon_level: int = 1
     history: list[str] = field(default_factory=list)
     dungeon_history_start: int = 0
+    next_upgrade_slot: str = "main_hand"
 
     @property
     def alive(self) -> bool:

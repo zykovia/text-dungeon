@@ -19,10 +19,13 @@ from .models import Item, Monster, Room
 from .templates import (
     BOSS,
     ITEM_TEMPLATES,
+    MAX_ITEM_TIER,
     MONSTER_TEMPLATES,
+    POTION_TEMPLATES,
     ROOM_TEMPLATES,
     SUPER_BOSS,
     WIN_ITEM_NAME,
+    item_template_for,
 )
 
 ENTRANCE_NAME = "Dungeon Entrance"
@@ -53,6 +56,30 @@ def _has_foreign_neighbor(
     return False
 
 
+def _pick_item_template(
+    rng: random.Random,
+    player_class: str | None,
+    upgrade_slot: str | None,
+    upgrade_tier: int | None,
+):
+    """Pick a template for a spawned item.
+
+    With no player context (used by callers that generate class-agnostic
+    dungeons), fall back to a uniform pick across every item. Otherwise, offer
+    a chance at the player's next weapon/off-hand upgrade for whichever slot
+    is due this dungeon, alongside the usual potions.
+    """
+    if player_class is None:
+        return rng.choice(ITEM_TEMPLATES)
+
+    candidates = list(POTION_TEMPLATES)
+    if upgrade_tier is not None and upgrade_tier <= MAX_ITEM_TIER:
+        upgrade = item_template_for(player_class, upgrade_slot, upgrade_tier)
+        if upgrade is not None:
+            candidates.append(upgrade)
+    return rng.choice(candidates)
+
+
 def _bfs_distances(rooms: dict[str, Room], start: str) -> dict[str, int]:
     distances = {start: 0}
     queue = deque([start])
@@ -70,6 +97,9 @@ def generate_dungeon(
     min_rooms: int = 6,
     max_rooms: int = 10,
     final_boss: bool = False,
+    player_class: str | None = None,
+    upgrade_slot: str | None = None,
+    upgrade_tier: int | None = None,
 ) -> dict[str, Room]:
     """Procedurally build a new dungeon as a self-avoiding random tree on a grid.
 
@@ -82,7 +112,9 @@ def generate_dungeon(
     if it has no free cell to expand into) becomes the boss chamber (the super
     boss if final_boss is set), and a vault room holding the win condition is
     attached beyond it, reachable only by passing through the boss. Remaining
-    rooms get a random scattering of monsters and items.
+    rooms get a random scattering of monsters and items: with a player_class
+    given, item spawns favor that class's next weapon/off-hand upgrade for
+    whichever slot (upgrade_slot, at upgrade_tier) is due this dungeon.
     """
     rng = random.Random(seed)
     num_rooms = rng.randint(min_rooms, max_rooms)
@@ -214,7 +246,7 @@ def generate_dungeon(
                 description=monster_template.description,
             )
         if rng.random() < ITEM_SPAWN_CHANCE:
-            item_template = rng.choice(ITEM_TEMPLATES)
+            item_template = _pick_item_template(rng, player_class, upgrade_slot, upgrade_tier)
             room.items.append(item_from_template(item_template))
 
     return rooms

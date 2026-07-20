@@ -12,7 +12,7 @@ from .models import Item, Monster, Player, Room
 # or misbehave on load (e.g. a Player/Room field is added, renamed, or removed,
 # or dungeon generation changes in a way old saves shouldn't carry forward).
 # Saves tagged with a different version are discarded instead of being loaded.
-SAVE_VERSION = 5
+SAVE_VERSION = 6
 
 
 def default_save_dir() -> Path:

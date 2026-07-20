@@ -12,4 +12,5 @@ def item_from_template(template: ItemTemplate) -> Item:
         player_class=template.player_class,
         slot=template.slot,
         defense_bonus=template.defense_bonus,
+        tier=template.tier,
     )
