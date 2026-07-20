@@ -14,6 +14,12 @@ const inventoryList = document.getElementById("inventory-list");
 const classSelect = document.getElementById("class-select");
 const classOptions = document.getElementById("class-options");
 
+const nameSelect = document.getElementById("name-select");
+const nameForm = document.getElementById("name-form");
+const nameInput = document.getElementById("name-input");
+
+const playerNameText = document.getElementById("player-name-text");
+
 const sidebar = document.getElementById("sidebar");
 const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 const sidebarToggle = document.getElementById("sidebar-toggle");
@@ -45,6 +51,7 @@ function renderStatus(status) {
   hpFill.classList.toggle("low", hpRatio <= 0.3);
   hpText.textContent = `${status.hp}/${status.max_hp}`;
 
+  playerNameText.textContent = status.name || "Adventurer";
   classText.textContent = status.player_class || "";
   levelText.textContent = status.level;
   xpText.textContent = `${status.xp}/${status.xp_per_level}`;
@@ -100,6 +107,25 @@ function showClassSelect(options, onChoose) {
   classSelect.classList.remove("hidden");
 }
 
+function showNameSelect(defaultName, onChoose) {
+  input.disabled = true;
+  nameInput.value = "";
+  nameInput.placeholder = defaultName;
+  nameSelect.classList.remove("hidden");
+  nameInput.focus();
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    onChoose(name || defaultName);
+    nameSelect.classList.add("hidden");
+    nameForm.removeEventListener("submit", handleSubmit);
+    input.disabled = false;
+    input.focus();
+  };
+  nameForm.addEventListener("submit", handleSubmit);
+}
+
 // Tracks the real visible viewport (excluding an open on-screen keyboard) so
 // the input line stays visible instead of being pushed off-screen or hidden
 // behind the keyboard on mobile browsers.
@@ -141,6 +167,10 @@ function connect() {
     const data = JSON.parse(event.data);
     if (data.type === "class_select") {
       showClassSelect(data.options, (chosenName) => socket.send(chosenName));
+      return;
+    }
+    if (data.type === "name_select") {
+      showNameSelect(data.default, (chosenName) => socket.send(chosenName));
       return;
     }
     appendLines(data.lines);

@@ -218,3 +218,17 @@ def test_class_determines_starting_stats_and_gear():
     assert game.player.hp == game.player.max_hp == 16
     assert game.player.attack == 2
     assert any(item.name == "apprentice staff" for item in game.player.inventory)
+
+
+def test_class_with_no_name_falls_back_to_the_class_default_name():
+    game = Game(player_class="Wizard")
+
+    assert game.player.name == "Yennefer"
+    assert game.status()["name"] == "Yennefer"
+
+
+def test_player_name_can_be_chosen():
+    game = Game(player_class="Wizard", player_name="Gandalf")
+
+    assert game.player.name == "Gandalf"
+    assert game.status()["name"] == "Gandalf"

@@ -8,6 +8,7 @@ class ClassTemplate:
     starting_hp: int
     starting_attack: int
     starting_item: str
+    default_name: str
 
 
 CLASS_TEMPLATES = [
@@ -17,6 +18,7 @@ CLASS_TEMPLATES = [
         starting_hp=24,
         starting_attack=4,
         starting_item="rusty sword",
+        default_name="Mulan",
     ),
     ClassTemplate(
         "Ranger",
@@ -24,6 +26,7 @@ CLASS_TEMPLATES = [
         starting_hp=20,
         starting_attack=3,
         starting_item="dagger",
+        default_name="Hippolyta",
     ),
     ClassTemplate(
         "Cleric",
@@ -31,6 +34,7 @@ CLASS_TEMPLATES = [
         starting_hp=22,
         starting_attack=3,
         starting_item="mace",
+        default_name="Margaret",
     ),
     ClassTemplate(
         "Wizard",
@@ -38,5 +42,6 @@ CLASS_TEMPLATES = [
         starting_hp=16,
         starting_attack=2,
         starting_item="apprentice staff",
+        default_name="Yennefer",
     ),
 ]

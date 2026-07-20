@@ -22,9 +22,10 @@ class Game:
         rooms: dict[str, Room] | None = None,
         running: bool = True,
         player_class: str | None = None,
+        player_name: str | None = None,
     ) -> None:
         """Start a fresh dungeon, or, if `player`/`rooms` are given, resume a saved one."""
-        self.player = player or create_player(player_class or DEFAULT_PLAYER_CLASS)
+        self.player = player or create_player(player_class or DEFAULT_PLAYER_CLASS, name=player_name)
         if rooms is not None:
             self.rooms = rooms
             self.coords = compute_coords(self.rooms)
@@ -231,6 +232,7 @@ class Game:
     def status(self) -> dict:
         """A snapshot of everything a UI needs for a stats/map/inventory sidebar."""
         return {
+            "name": self.player.name,
             "hp": self.player.hp,
             "max_hp": self.player.max_hp,
             "player_class": self.player.player_class,
