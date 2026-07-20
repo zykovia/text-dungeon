@@ -8,6 +8,8 @@ class BossTemplate:
     room_description: str
     monster_description: str
     crown_description: str
+    vault_room_name: str
+    vault_room_description: str
 
 
 BOSS = BossTemplate(
@@ -16,6 +18,10 @@ BOSS = BossTemplate(
     room_description="A massive figure sits upon a throne of bones, waiting.",
     monster_description="The master of this dungeon, clad in black iron.",
     crown_description="The Dungeon Lord's crown. Proof of your victory.",
+    vault_room_name="Vault of the Dungeon Lord",
+    vault_room_description=(
+        "Behind the throne, a small chamber holds the fallen lord's treasure."
+    ),
 )
 
 SUPER_BOSS = BossTemplate(
@@ -28,6 +34,10 @@ SUPER_BOSS = BossTemplate(
         "The true master of every dungeon, radiating a power that dwarfs any lord before him."
     ),
     crown_description="The Dungeon Emperor's crown. Proof you have conquered every dungeon.",
+    vault_room_name="The Emperor's Reliquary",
+    vault_room_description=(
+        "Beyond the sanctum, a hidden chamber holds the empire's most sacred relic."
+    ),
 )
 
 WIN_ITEM_NAME = "golden crown"

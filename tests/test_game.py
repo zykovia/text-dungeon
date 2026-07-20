@@ -112,7 +112,8 @@ def test_advancing_generates_a_dungeon_sized_for_the_new_level():
 
     assert game.player.dungeon_level == 4
     min_rooms, max_rooms = room_count_range(4)
-    assert min_rooms <= len(game.rooms) <= max_rooms
+    # +1 to account for the crown's vault room, attached beyond the boss chamber.
+    assert min_rooms <= len(game.rooms) <= max_rooms + 1
 
 
 def test_taking_the_crown_at_max_dungeon_level_ends_the_game():
