@@ -7,10 +7,21 @@ from text_dungeon.templates import BOSS, SUPER_BOSS
 from text_dungeon.world import generate_dungeon, is_final_dungeon, room_count_range
 
 
-def _boss_rooms(rooms):
+def _crown_rooms(rooms):
     return [
         room for room in rooms.values() if any(item.name == "golden crown" for item in room.items)
     ]
+
+
+_BOSS_MONSTER_NAMES = {BOSS.monster_name, SUPER_BOSS.monster_name}
+
+
+def _boss_monster_room(rooms):
+    return next(
+        room
+        for room in rooms.values()
+        if room.monster is not None and room.monster.name in _BOSS_MONSTER_NAMES
+    )
 
 
 def test_generate_dungeon_all_rooms_reachable_from_entrance():
@@ -35,10 +46,24 @@ def test_generate_dungeon_exits_are_reciprocal():
 
 def test_generate_dungeon_has_exactly_one_win_condition():
     rooms = generate_dungeon(seed=42)
-    boss_rooms = _boss_rooms(rooms)
-    assert len(boss_rooms) == 1
-    assert boss_rooms[0].monster is not None
-    assert boss_rooms[0].monster.name == "Dungeon Lord"
+    crown_rooms = _crown_rooms(rooms)
+    assert len(crown_rooms) == 1
+    boss_room = _boss_monster_room(rooms)
+    assert boss_room.monster.name == "Dungeon Lord"
+
+
+def test_generate_dungeon_crown_room_is_guarded_by_the_boss():
+    # The crown must sit behind the boss, not alongside it, so a player can't
+    # grab it and skip the fight: it lives alone in a vault whose only exit
+    # leads back to the room holding the boss monster.
+    for seed in range(20):
+        rooms = generate_dungeon(seed=seed)
+        crown_room = _crown_rooms(rooms)[0]
+        assert crown_room.monster is None
+        assert len(crown_room.items) == 1
+        assert len(crown_room.exits) == 1
+        boss_id = next(iter(crown_room.exits.values()))
+        assert rooms[boss_id].monster is not None
 
 
 def test_generate_dungeon_seed_is_reproducible():
@@ -51,8 +76,9 @@ def test_generate_dungeon_seed_is_reproducible():
 
 def test_generate_dungeon_handles_rooms_beyond_the_template_pool():
     # 15 rooms needs 14 room templates, more than the 10 available; must not crash.
+    # +1 possible for the crown's vault room, attached beyond the boss chamber.
     rooms = generate_dungeon(seed=1, min_rooms=15, max_rooms=15)
-    assert len(rooms) == 15
+    assert len(rooms) in (15, 16)
 
 
 def test_room_count_range_grows_with_dungeon_level():
@@ -69,12 +95,12 @@ def test_is_final_dungeon_at_and_beyond_max_level():
 
 def test_generate_dungeon_places_regular_boss_by_default():
     rooms = generate_dungeon(seed=42)
-    assert _boss_rooms(rooms)[0].monster.name == BOSS.monster_name
+    assert _boss_monster_room(rooms).monster.name == BOSS.monster_name
 
 
 def test_generate_dungeon_places_super_boss_when_final():
     rooms = generate_dungeon(seed=42, final_boss=True)
-    assert _boss_rooms(rooms)[0].monster.name == SUPER_BOSS.monster_name
+    assert _boss_monster_room(rooms).monster.name == SUPER_BOSS.monster_name
 
 
 def test_generate_dungeon_never_places_unconnected_rooms_adjacent():

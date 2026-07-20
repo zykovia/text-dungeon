@@ -77,8 +77,10 @@ def generate_dungeon(
     room is reachable from "entrance". A new room is also rejected if it would
     land grid-adjacent to any room other than the one it's branching off of, so
     two rooms are never drawn touching on the minimap unless an exit actually
-    connects them. The farthest room from the entrance becomes the boss chamber
-    holding the win condition (the super boss if final_boss is set); remaining
+    connects them. The room farthest from the entrance (or the next-farthest,
+    if it has no free cell to expand into) becomes the boss chamber (the super
+    boss if final_boss is set), and a vault room holding the win condition is
+    attached beyond it, reachable only by passing through the boss. Remaining
     rooms get a random scattering of monsters and items.
     """
     rng = random.Random(seed)
@@ -128,8 +130,32 @@ def generate_dungeon(
         if not placed:
             frontier.remove(source_id)
 
+    # The boss guards the room farthest from the entrance. If that room has no
+    # free adjacent cell, fall back to the next-farthest room instead, so a
+    # vault can always be attached beyond the boss.
     distances = _bfs_distances(rooms, "entrance")
-    boss_id = max(distances, key=distances.get)
+    candidates = sorted(distances, key=distances.get, reverse=True)
+    boss_id = candidates[0]
+    vault_direction = None
+    vault_coord = None
+    for candidate_id in candidates:
+        cx, cy = coords[candidate_id]
+        directions = list(DIRECTION_DELTAS)
+        rng.shuffle(directions)
+        for direction in directions:
+            dx, dy = DIRECTION_DELTAS[direction]
+            new_coord = (cx + dx, cy + dy)
+            if new_coord in room_at_coord:
+                continue
+            if _has_foreign_neighbor(new_coord, candidate_id, room_at_coord):
+                continue
+            boss_id = candidate_id
+            vault_direction = direction
+            vault_coord = new_coord
+            break
+        if vault_direction is not None:
+            break
+
     boss_room = rooms[boss_id]
     if final_boss:
         boss_room.name = SUPER_BOSS.room_name
@@ -141,6 +167,8 @@ def generate_dungeon(
             description=SUPER_BOSS.monster_description,
         )
         crown_description = SUPER_BOSS.crown_description
+        vault_name = SUPER_BOSS.vault_room_name
+        vault_description = SUPER_BOSS.vault_room_description
     else:
         boss_room.name = BOSS.room_name
         boss_room.description = BOSS.room_description
@@ -151,9 +179,29 @@ def generate_dungeon(
             description=BOSS.monster_description,
         )
         crown_description = BOSS.crown_description
-    boss_room.items = [Item(WIN_ITEM_NAME, crown_description)]
+        vault_name = BOSS.vault_room_name
+        vault_description = BOSS.vault_room_description
 
-    other_ids = [room_id for room_id in rooms if room_id not in ("entrance", boss_id)]
+    # The crown lives in its own vault beyond the boss chamber, so the only
+    # way to reach it is to walk through (and thus defeat) the boss first.
+    if vault_coord is not None:
+        vault_id = f"room_{next_id}"
+        next_id += 1
+        vault_room = Room(id=vault_id, name=vault_name, description=vault_description)
+        vault_room.exits[OPPOSITE_DIRECTION[vault_direction]] = boss_id
+        boss_room.exits[vault_direction] = vault_id
+        rooms[vault_id] = vault_room
+        coords[vault_id] = vault_coord
+        room_at_coord[vault_coord] = vault_id
+        vault_room.items = [Item(WIN_ITEM_NAME, crown_description)]
+    else:
+        # Every adjacent cell was occupied; fall back to the old behavior.
+        vault_id = None
+        boss_room.items = [Item(WIN_ITEM_NAME, crown_description)]
+
+    other_ids = [
+        room_id for room_id in rooms if room_id not in ("entrance", boss_id, vault_id)
+    ]
     for room_id in other_ids:
         room = rooms[room_id]
         if rng.random() < MONSTER_SPAWN_CHANCE:
