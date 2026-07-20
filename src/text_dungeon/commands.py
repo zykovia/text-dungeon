@@ -18,7 +18,7 @@ Commands:
   attack           attack the monster in the room
   use <item>       use an item from your inventory
   skills           show the skills/spells you know
-  cast <skill>     cast a known skill or spell
+  cast <skill>     cast a known skill or spell (once per round)
   map (m)          show a map of rooms you've explored
   history          show everything you've done this playthrough
   help             show this message

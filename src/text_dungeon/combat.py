@@ -18,7 +18,8 @@ def resolve_attack(player: Player, monster: Monster) -> AttackResult:
     """Apply one round of the player attacking `monster`, mutating both in place.
 
     Any skill cast beforehand (`Player.pending_*`) applies to this round only,
-    then is cleared regardless of outcome.
+    then is cleared regardless of outcome. This also marks the end of the round
+    for the once-per-round skill lock (`Player.used_skills_this_round`).
     """
     equipped = [item for item in (player.main_hand, player.off_hand) if item]
     bonus = sum(item.damage_bonus for item in equipped) + player.pending_attack_buff
@@ -29,6 +30,7 @@ def resolve_attack(player: Player, monster: Monster) -> AttackResult:
     player.pending_attack_buff = 0
     player.pending_block = False
     player.pending_monster_debuff = 0
+    player.used_skills_this_round.clear()
 
     damage = player.attack + bonus + random.randint(*ATTACK_DAMAGE_ROLL)
     monster.hp -= damage

@@ -1,4 +1,74 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..models import Player
+
+
+class SkillEffect(ABC):
+    """One mechanical outcome of casting a skill.
+
+    New effect types (poison, stun, lifesteal, ...) are added by writing a
+    new subclass here, not by extending branching logic elsewhere.
+    """
+
+    @abstractmethod
+    def describe(self) -> str:
+        """Player-facing summary of the mechanical outcome."""
+
+    @abstractmethod
+    def apply(self, player: Player, skill_name: str) -> str:
+        """Mutate `player` in place and return a message to emit."""
+
+
+@dataclass(frozen=True)
+class Heal(SkillEffect):
+    amount: int
+
+    def describe(self) -> str:
+        return f"heals {self.amount} HP"
+
+    def apply(self, player: Player, skill_name: str) -> str:
+        healed = min(self.amount, player.max_hp - player.hp)
+        player.hp += healed
+        return f"You cast {skill_name} and recover {healed} HP. ({player.hp}/{player.max_hp} HP)"
+
+
+@dataclass(frozen=True)
+class AttackBuff(SkillEffect):
+    amount: int
+
+    def describe(self) -> str:
+        return f"+{self.amount} to your next attack"
+
+    def apply(self, player: Player, skill_name: str) -> str:
+        player.pending_attack_buff += self.amount
+        return f"You channel {skill_name}, empowering your next attack."
+
+
+@dataclass(frozen=True)
+class Block(SkillEffect):
+    def describe(self) -> str:
+        return "blocks the monster's next attack"
+
+    def apply(self, player: Player, skill_name: str) -> str:
+        player.pending_block = True
+        return f"You cast {skill_name}, readying yourself to block the next blow."
+
+
+@dataclass(frozen=True)
+class MonsterDebuff(SkillEffect):
+    amount: int
+
+    def describe(self) -> str:
+        return f"-{self.amount} to the monster's next attack"
+
+    def apply(self, player: Player, skill_name: str) -> str:
+        player.pending_monster_debuff += self.amount
+        return f"You cast {skill_name}, weakening your foe's next strike."
 
 
 @dataclass(frozen=True)
@@ -8,10 +78,10 @@ class SkillTemplate:
     player_class: str
     unlock_level: int
     mana_cost: int
-    heal: int = 0
-    attack_buff: int = 0
-    block: bool = False
-    monster_attack_debuff: int = 0
+    effects: tuple[SkillEffect, ...] = ()
+
+    def effect_summary(self) -> str:
+        return "; ".join(effect.describe() for effect in self.effects)
 
 
 SKILL_TEMPLATES = [
@@ -21,7 +91,7 @@ SKILL_TEMPLATES = [
         player_class="Warrior",
         unlock_level=1,
         mana_cost=2,
-        heal=4,
+        effects=(Heal(4),),
     ),
     SkillTemplate(
         "shield bash",
@@ -29,7 +99,7 @@ SKILL_TEMPLATES = [
         player_class="Warrior",
         unlock_level=2,
         mana_cost=3,
-        block=True,
+        effects=(Block(),),
     ),
     SkillTemplate(
         "cleave",
@@ -37,7 +107,7 @@ SKILL_TEMPLATES = [
         player_class="Warrior",
         unlock_level=4,
         mana_cost=4,
-        attack_buff=4,
+        effects=(AttackBuff(4),),
     ),
     SkillTemplate(
         "second wind",
@@ -45,7 +115,7 @@ SKILL_TEMPLATES = [
         player_class="Warrior",
         unlock_level=6,
         mana_cost=6,
-        heal=10,
+        effects=(Heal(10),),
     ),
     SkillTemplate(
         "quick shot",
@@ -53,7 +123,7 @@ SKILL_TEMPLATES = [
         player_class="Ranger",
         unlock_level=1,
         mana_cost=2,
-        attack_buff=2,
+        effects=(AttackBuff(2),),
     ),
     SkillTemplate(
         "snare",
@@ -61,7 +131,7 @@ SKILL_TEMPLATES = [
         player_class="Ranger",
         unlock_level=2,
         mana_cost=3,
-        monster_attack_debuff=3,
+        effects=(MonsterDebuff(3),),
     ),
     SkillTemplate(
         "evasion",
@@ -69,7 +139,7 @@ SKILL_TEMPLATES = [
         player_class="Ranger",
         unlock_level=4,
         mana_cost=4,
-        block=True,
+        effects=(Block(),),
     ),
     SkillTemplate(
         "precise strike",
@@ -77,7 +147,7 @@ SKILL_TEMPLATES = [
         player_class="Ranger",
         unlock_level=6,
         mana_cost=6,
-        attack_buff=6,
+        effects=(AttackBuff(6),),
     ),
     SkillTemplate(
         "heal",
@@ -85,7 +155,7 @@ SKILL_TEMPLATES = [
         player_class="Cleric",
         unlock_level=1,
         mana_cost=3,
-        heal=6,
+        effects=(Heal(6),),
     ),
     SkillTemplate(
         "bless",
@@ -93,7 +163,7 @@ SKILL_TEMPLATES = [
         player_class="Cleric",
         unlock_level=2,
         mana_cost=3,
-        attack_buff=3,
+        effects=(AttackBuff(3),),
     ),
     SkillTemplate(
         "divine shield",
@@ -101,7 +171,7 @@ SKILL_TEMPLATES = [
         player_class="Cleric",
         unlock_level=4,
         mana_cost=4,
-        block=True,
+        effects=(Block(),),
     ),
     SkillTemplate(
         "smite",
@@ -109,7 +179,7 @@ SKILL_TEMPLATES = [
         player_class="Cleric",
         unlock_level=6,
         mana_cost=6,
-        attack_buff=7,
+        effects=(AttackBuff(7),),
     ),
     SkillTemplate(
         "frost bolt",
@@ -117,8 +187,7 @@ SKILL_TEMPLATES = [
         player_class="Wizard",
         unlock_level=1,
         mana_cost=3,
-        attack_buff=2,
-        monster_attack_debuff=2,
+        effects=(AttackBuff(2), MonsterDebuff(2)),
     ),
     SkillTemplate(
         "arcane shield",
@@ -126,7 +195,7 @@ SKILL_TEMPLATES = [
         player_class="Wizard",
         unlock_level=2,
         mana_cost=3,
-        block=True,
+        effects=(Block(),),
     ),
     SkillTemplate(
         "drain life",
@@ -134,8 +203,7 @@ SKILL_TEMPLATES = [
         player_class="Wizard",
         unlock_level=4,
         mana_cost=5,
-        attack_buff=3,
-        heal=3,
+        effects=(AttackBuff(3), Heal(3)),
     ),
     SkillTemplate(
         "fireball",
@@ -143,6 +211,6 @@ SKILL_TEMPLATES = [
         player_class="Wizard",
         unlock_level=6,
         mana_cost=8,
-        attack_buff=8,
+        effects=(AttackBuff(8),),
     ),
 ]

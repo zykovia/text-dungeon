@@ -19,6 +19,7 @@ class Player:
     pending_attack_buff: int = 0
     pending_block: bool = False
     pending_monster_debuff: int = 0
+    used_skills_this_round: set[str] = field(default_factory=set)
     current_room: str = "entrance"
     visited: set[str] = field(default_factory=set)
     level: int = 1
