@@ -44,6 +44,17 @@ Persist the dungeon itself (not just per-player progress) on the running
 container, so the world survives restarts and is shared by everyone
 connected to it.
 
+### World select ingress
+
+Once worlds are split across multiple containers, players need a way to pick
+which one to join instead of being routed to a single fixed server. Planned
+shape: a separate "world select" container/service that lists the available
+world containers and acts as the entry point, routing the player's connection
+to the world they choose. For a world the player already has a character in,
+the list should show their status in that world (level/XP, HP, items held,
+current floor) so they can recognize their own character and decide whether
+to rejoin it, rather than just seeing an anonymous list of servers.
+
 ## Design note: multiplayer is one change, not two
 
 "Multiplayer" and "persistent world" are really the same architectural
