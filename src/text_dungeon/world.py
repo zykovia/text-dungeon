@@ -14,6 +14,7 @@ from .balance import (
     SUPER_BOSS_HP_RANGE,
 )
 from .directions import DIRECTION_DELTAS, OPPOSITE_DIRECTION
+from .items import item_from_template
 from .models import Item, Monster, Room
 from .templates import (
     BOSS,
@@ -214,14 +215,6 @@ def generate_dungeon(
             )
         if rng.random() < ITEM_SPAWN_CHANCE:
             item_template = rng.choice(ITEM_TEMPLATES)
-            room.items.append(
-                Item(
-                    item_template.name,
-                    item_template.description,
-                    heal=item_template.heal,
-                    damage_bonus=item_template.damage_bonus,
-                    player_class=item_template.player_class,
-                )
-            )
+            room.items.append(item_from_template(item_template))
 
     return rooms

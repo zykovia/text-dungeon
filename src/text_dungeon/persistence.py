@@ -12,7 +12,7 @@ from .models import Item, Monster, Player, Room
 # or misbehave on load (e.g. a Player/Room field is added, renamed, or removed,
 # or dungeon generation changes in a way old saves shouldn't carry forward).
 # Saves tagged with a different version are discarded instead of being loaded.
-SAVE_VERSION = 3
+SAVE_VERSION = 4
 
 
 def default_save_dir() -> Path:
@@ -36,6 +36,12 @@ def _state_from_game(game: Game) -> dict:
 def _game_from_state(state: dict) -> Game:
     player_data = dict(state["player"])
     player_data["inventory"] = [Item(**item) for item in player_data["inventory"]]
+    player_data["main_hand"] = (
+        Item(**player_data["main_hand"]) if player_data["main_hand"] is not None else None
+    )
+    player_data["off_hand"] = (
+        Item(**player_data["off_hand"]) if player_data["off_hand"] is not None else None
+    )
     player_data["visited"] = set(player_data["visited"])
     player = Player(**player_data)
 

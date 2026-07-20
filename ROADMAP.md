@@ -25,6 +25,11 @@ These were part of the roadmap discussion but have already been built:
 - **Class-specific items.** Weapon items are restricted to the class they're
   meant for; taking one as the wrong class is blocked and it stays in the
   room. Generic items (health potions, bandages) stay usable by everyone.
+- **Equipment slots.** Combat bonuses come only from a `main_hand`/`off_hand`
+  pair instead of summing every weapon ever carried. Each class starts with
+  a matched pair (e.g. Warrior's rusty sword + wooden shield); `equip`/
+  `unequip` swap gear in and out of the two slots, and off-hand items can
+  either boost damage or reduce incoming damage.
 
 ## Planned
 
@@ -77,7 +82,6 @@ comparison.
 
 Not yet committed to, but worth keeping in mind as the above lands:
 
-- Equipment slots (weapon/armor) instead of a flat inventory list.
 - Class-specific abilities beyond just starting gear (e.g. cleric heal,
   wizard spell).
 - Player presence/chat once multiplayer exists (e.g. "Aragorn entered the
