@@ -9,7 +9,7 @@ from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
 from .minimap import compute_coords
 from .minimap import render_map as build_map_lines
 from .models import Item, Player, Room
-from .templates import BOSS, SKILL_TEMPLATES, SUPER_BOSS, WIN_ITEM_NAME
+from .templates import BOSS, MAX_ITEM_TIER, SKILL_TEMPLATES, SUPER_BOSS, WIN_ITEM_NAME
 from .world import generate_dungeon, is_final_dungeon, room_count_range
 
 
@@ -37,10 +37,20 @@ class Game:
     def _enter_new_dungeon(self, seed: int | None) -> None:
         min_rooms, max_rooms = room_count_range(self.player.dungeon_level)
         final_boss = is_final_dungeon(self.player.dungeon_level)
+        upgrade_slot = self.player.next_upgrade_slot
+        equipped = getattr(self.player, upgrade_slot)
+        upgrade_tier = min((equipped.tier if equipped else 0) + 1, MAX_ITEM_TIER)
         self.rooms = generate_dungeon(
-            seed=seed, min_rooms=min_rooms, max_rooms=max_rooms, final_boss=final_boss
+            seed=seed,
+            min_rooms=min_rooms,
+            max_rooms=max_rooms,
+            final_boss=final_boss,
+            player_class=self.player.player_class,
+            upgrade_slot=upgrade_slot,
+            upgrade_tier=upgrade_tier,
         )
         self.coords = compute_coords(self.rooms)
+        self.player.next_upgrade_slot = "off_hand" if upgrade_slot == "main_hand" else "main_hand"
         history.start_new_dungeon(self.player)
 
     def _relocate_to_entrance(self) -> None:
