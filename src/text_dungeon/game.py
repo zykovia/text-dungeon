@@ -9,7 +9,7 @@ from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
 from .minimap import compute_coords
 from .minimap import render_map as build_map_lines
 from .models import Item, Player, Room
-from .templates import BOSS, SUPER_BOSS, WIN_ITEM_NAME
+from .templates import BOSS, SKILL_TEMPLATES, SUPER_BOSS, WIN_ITEM_NAME
 from .world import generate_dungeon, is_final_dungeon, room_count_range
 
 
@@ -234,6 +234,8 @@ class Game:
                     f"You reached level {level_up.level}! "
                     f"Max HP is now {level_up.max_hp}, and you feel fully healed."
                 )
+                if level_up.skill_learned:
+                    self.emit(f"You've learned {level_up.skill_learned}!")
             return
 
         self.emit(
@@ -257,6 +259,47 @@ class Game:
                 return
         self.emit(f"You don't have a '{item_name}'.")
 
+    def _skill_template(self, skill_name: str):
+        return next((s for s in SKILL_TEMPLATES if s.name == skill_name), None)
+
+    def show_skills(self) -> None:
+        if not self.player.skills:
+            self.emit("You don't know any skills yet.")
+            return
+        for skill_name in self.player.skills:
+            skill = self._skill_template(skill_name)
+            self.emit(f"- {skill.name} ({skill.mana_cost} mana): {skill.description}")
+
+    def cast(self, skill_name: str) -> None:
+        if skill_name not in self.player.skills:
+            self.emit(f"You don't know a skill called '{skill_name}'.")
+            return
+
+        skill = self._skill_template(skill_name)
+        if self.player.mana < skill.mana_cost:
+            self.emit(
+                f"You don't have enough mana to cast {skill.name} ({skill.mana_cost} needed)."
+            )
+            return
+
+        self.player.mana -= skill.mana_cost
+        if skill.heal:
+            healed = min(skill.heal, self.player.max_hp - self.player.hp)
+            self.player.hp += healed
+            self.emit(
+                f"You cast {skill.name} and recover {healed} HP. "
+                f"({self.player.hp}/{self.player.max_hp} HP)"
+            )
+        if skill.attack_buff:
+            self.player.pending_attack_buff += skill.attack_buff
+            self.emit(f"You channel {skill.name}, empowering your next attack.")
+        if skill.block:
+            self.player.pending_block = True
+            self.emit(f"You cast {skill.name}, readying yourself to block the next blow.")
+        if skill.monster_attack_debuff:
+            self.player.pending_monster_debuff += skill.monster_attack_debuff
+            self.emit(f"You cast {skill.name}, weakening your foe's next strike.")
+
     def _map_lines(self) -> list[str]:
         return build_map_lines(
             self.rooms, self.coords, self.player.visited, self.player.current_room
@@ -272,6 +315,8 @@ class Game:
             "name": self.player.name,
             "hp": self.player.hp,
             "max_hp": self.player.max_hp,
+            "mana": self.player.mana,
+            "max_mana": self.player.max_mana,
             "player_class": self.player.player_class,
             "level": self.player.level,
             "xp": self.player.xp,
@@ -285,6 +330,14 @@ class Game:
             "inventory": [
                 {"name": item.name, "description": item.description}
                 for item in self.player.inventory
+            ],
+            "skills": [
+                {
+                    "name": skill.name,
+                    "description": skill.description,
+                    "mana_cost": skill.mana_cost,
+                }
+                for skill in (self._skill_template(name) for name in self.player.skills)
             ],
             "map_lines": self._map_lines(),
         }

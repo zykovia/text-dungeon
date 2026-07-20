@@ -30,6 +30,13 @@ These were part of the roadmap discussion but have already been built:
   a matched pair (e.g. Warrior's rusty sword + wooden shield); `equip`/
   `unequip` swap gear in and out of the two slots, and off-hand items can
   either boost damage or reduce incoming damage.
+- **Class skills and spells.** Each class has a themed set of four skills
+  (Warrior: rally, shield bash, cleave, second wind; Ranger: quick shot,
+  snare, evasion, precise strike; Cleric: heal, bless, divine shield, smite;
+  Wizard: frost bolt, arcane shield, drain life, fireball), gated behind a
+  per-class mana pool and unlocked progressively as the player levels up.
+  `cast <skill>` applies a heal, an attack buff, a full block, or an enemy
+  debuff that carries into the very next `attack`.
 
 ## Planned
 
@@ -82,8 +89,6 @@ comparison.
 
 Not yet committed to, but worth keeping in mind as the above lands:
 
-- Class-specific abilities beyond just starting gear (e.g. cleric heal,
-  wizard spell).
 - Player presence/chat once multiplayer exists (e.g. "Aragorn entered the
   room").
 - A leaderboard or hall of fame for completed runs.

@@ -17,6 +17,8 @@ Commands:
   unequip <item>   put a wielded item back in your inventory
   attack           attack the monster in the room
   use <item>       use an item from your inventory
+  skills           show the skills/spells you know
+  cast <skill>     cast a known skill or spell
   map (m)          show a map of rooms you've explored
   history          show everything you've done this playthrough
   help             show this message
@@ -71,6 +73,17 @@ def _cmd_unequip(game: Game, arg: str) -> None:
     game.unequip(arg)
 
 
+def _cmd_skills(game: Game, arg: str) -> None:
+    game.show_skills()
+
+
+def _cmd_cast(game: Game, arg: str) -> None:
+    if not arg:
+        game.emit("Cast what?")
+        return
+    game.cast(arg)
+
+
 def _cmd_help(game: Game, arg: str) -> None:
     for line in HELP_TEXT.splitlines():
         game.emit(line)
@@ -100,6 +113,8 @@ COMMANDS: dict[str, Callable[[Game, str], None]] = {
     "use": _cmd_use,
     "equip": _cmd_equip,
     "unequip": _cmd_unequip,
+    "skills": _cmd_skills,
+    "cast": _cmd_cast,
     "help": _cmd_help,
     "quit": _cmd_quit,
     "map": _cmd_map,

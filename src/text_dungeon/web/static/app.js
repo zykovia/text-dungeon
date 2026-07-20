@@ -4,12 +4,15 @@ const form = document.getElementById("input-line");
 
 const hpFill = document.getElementById("hp-fill");
 const hpText = document.getElementById("hp-text");
+const manaFill = document.getElementById("mana-fill");
+const manaText = document.getElementById("mana-text");
 const classText = document.getElementById("class-text");
 const levelText = document.getElementById("level-text");
 const xpText = document.getElementById("xp-text");
 const dungeonText = document.getElementById("dungeon-text");
 const mapDisplay = document.getElementById("map-display");
 const equipmentList = document.getElementById("equipment-list");
+const skillsList = document.getElementById("skills-list");
 const inventoryList = document.getElementById("inventory-list");
 
 const classSelect = document.getElementById("class-select");
@@ -52,6 +55,10 @@ function renderStatus(status) {
   hpFill.classList.toggle("low", hpRatio <= 0.3);
   hpText.textContent = `${status.hp}/${status.max_hp}`;
 
+  const manaRatio = status.max_mana > 0 ? status.mana / status.max_mana : 0;
+  manaFill.style.width = `${Math.max(0, Math.min(1, manaRatio)) * 100}%`;
+  manaText.textContent = `${status.mana}/${status.max_mana}`;
+
   playerNameText.textContent = status.name || "Adventurer";
   classText.textContent = status.player_class || "";
   levelText.textContent = status.level;
@@ -78,6 +85,31 @@ function renderStatus(status) {
   equipmentList.innerHTML = "";
   equipmentList.appendChild(itemRow("Main hand", status.equipment.main_hand));
   equipmentList.appendChild(itemRow("Off hand", status.equipment.off_hand));
+
+  function skillRow(skill) {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "item-name";
+    name.textContent = `${skill.name} (${skill.mana_cost} MP)`;
+    li.appendChild(name);
+    const desc = document.createElement("span");
+    desc.className = "item-desc";
+    desc.textContent = skill.description;
+    li.appendChild(desc);
+    return li;
+  }
+
+  skillsList.innerHTML = "";
+  if (status.skills.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty";
+    empty.textContent = "No skills learned yet.";
+    skillsList.appendChild(empty);
+  } else {
+    status.skills.forEach((skill) => {
+      skillsList.appendChild(skillRow(skill));
+    });
+  }
 
   inventoryList.innerHTML = "";
   if (status.inventory.length === 0) {

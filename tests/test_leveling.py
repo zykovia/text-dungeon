@@ -56,3 +56,23 @@ def test_gain_xp_overflow_carries_remainder_and_can_multi_level():
     assert [level_up.level for level_up in level_ups] == [2, 3]
     assert player.level == 3
     assert player.xp == 3
+
+
+def test_gain_xp_unlocks_a_skill_at_its_configured_level():
+    player = Player(name="Hero", player_class="Warrior", max_mana=6)
+    level_ups = gain_xp(player, XP_PER_LEVEL)
+    assert level_ups[0].skill_learned == "shield bash"
+    assert player.skills == ["shield bash"]
+
+
+def test_gain_xp_refills_mana_on_level_up():
+    player = Player(name="Hero", player_class="Warrior", mana=0, max_mana=6)
+    gain_xp(player, XP_PER_LEVEL)
+    assert player.mana == player.max_mana == 6
+
+
+def test_gain_xp_leaves_skills_unchanged_on_a_level_with_no_new_skill():
+    player = Player(name="Hero", player_class="Warrior", max_mana=6)
+    level_ups = gain_xp(player, XP_PER_LEVEL * 2)
+    assert [level_up.skill_learned for level_up in level_ups] == ["shield bash", None]
+    assert player.skills == ["shield bash"]

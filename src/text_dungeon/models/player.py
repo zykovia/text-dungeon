@@ -13,6 +13,12 @@ class Player:
     inventory: list[Item] = field(default_factory=list)
     main_hand: Item | None = None
     off_hand: Item | None = None
+    mana: int = 0
+    max_mana: int = 0
+    skills: list[str] = field(default_factory=list)
+    pending_attack_buff: int = 0
+    pending_block: bool = False
+    pending_monster_debuff: int = 0
     current_room: str = "entrance"
     visited: set[str] = field(default_factory=set)
     level: int = 1
