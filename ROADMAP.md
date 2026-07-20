@@ -46,6 +46,13 @@ These were part of the roadmap discussion but have already been built:
 - **Item mechanics visible in UI.** Inventory and equip screens show each
   item's mechanical effect (damage, armor, healing) instead of just its name,
   so players can compare gear before equipping it.
+- **Inventory decluttering.** Non-final dungeons no longer place a golden
+  crown to collect; the vault beyond an ordinary boss auto-advances the
+  player to the next dungeon on entry instead, so nothing piles up across
+  the six regular dungeons. Only the true final boss still guards a crown to
+  win. Weapons bumped out of a slot on `equip` are flagged retired and
+  collapse into a single "Old gear (N)" line instead of cluttering the list
+  one entry per obsolete tier.
 
 ## Planned
 
