@@ -136,6 +136,13 @@ body {
   font-size: 12px;
 }
 
+.skill-effect {
+  display: block;
+  color: #ffd479;
+  opacity: 0.9;
+  font-size: 12px;
+}
+
 #sidebar-backdrop {
   display: none;
 }

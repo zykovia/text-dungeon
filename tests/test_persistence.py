@@ -57,6 +57,7 @@ def test_save_and_load_round_trips_skills_and_mana(tmp_path):
     game.player.pending_attack_buff = 3
     game.player.pending_block = True
     game.player.pending_monster_debuff = 2
+    game.player.used_skills_this_round = {"heal"}
 
     save_game("player-1c", game, save_dir=tmp_path)
     restored = load_game("player-1c", save_dir=tmp_path)
@@ -67,6 +68,7 @@ def test_save_and_load_round_trips_skills_and_mana(tmp_path):
     assert restored.player.pending_attack_buff == 3
     assert restored.player.pending_block is True
     assert restored.player.pending_monster_debuff == 2
+    assert restored.player.used_skills_this_round == {"heal"}
 
 
 def test_save_and_load_round_trips_room_and_monster_state(tmp_path):

@@ -96,6 +96,10 @@ function renderStatus(status) {
     desc.className = "item-desc";
     desc.textContent = skill.description;
     li.appendChild(desc);
+    const effect = document.createElement("span");
+    effect.className = "skill-effect";
+    effect.textContent = skill.effect;
+    li.appendChild(effect);
     return li;
   }
 

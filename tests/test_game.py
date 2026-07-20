@@ -375,7 +375,9 @@ def test_show_skills_lists_known_skills():
     game.show_skills()
 
     output = game.pop_output()
-    assert any("rally" in line and "2 mana" in line for line in output)
+    assert any(
+        "rally" in line and "2 mana" in line and "Effect: heals 4 HP" in line for line in output
+    )
 
 
 def test_status_includes_mana_and_skills():
@@ -390,5 +392,46 @@ def test_status_includes_mana_and_skills():
             "name": "rally",
             "description": "A battle cry that steadies your nerves and closes a wound.",
             "mana_cost": 2,
+            "effect": "heals 4 HP",
         }
     ]
+
+
+def test_cast_same_skill_twice_in_one_round_is_refused():
+    game = Game(seed=1, player_class="Cleric")
+    start_mana = game.player.mana
+
+    game.cast("heal")
+    game.player.hp = 5
+    game.cast("heal")
+
+    output = game.pop_output()
+    assert "You've already used heal this round." in output
+    assert game.player.hp == 5
+    assert game.player.mana == start_mana - 3
+
+
+def test_cast_different_skills_in_one_round_both_succeed():
+    game = Game(seed=1, player_class="Wizard")
+    game.player.skills.append("arcane shield")
+
+    game.cast("frost bolt")
+    game.cast("arcane shield")
+
+    assert game.player.pending_attack_buff == 2
+    assert game.player.pending_monster_debuff == 2
+    assert game.player.pending_block is True
+
+
+def test_skill_is_available_again_after_attack_resolves():
+    game = Game(seed=1, player_class="Cleric")
+    game.current_room().monster = Monster("test monster", hp=5, attack=1)
+
+    game.cast("heal")
+    game.attack()
+    game.player.hp = 5
+    game.cast("heal")
+
+    output = game.pop_output()
+    assert "You've already used heal this round." not in output
+    assert game.player.hp == 11

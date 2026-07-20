@@ -99,3 +99,13 @@ def test_resolve_attack_pending_monster_debuff_reduces_incoming_damage_and_is_co
 
     second_result = resolve_attack(player, monster)
     assert second_result.incoming_damage > 0
+
+
+def test_resolve_attack_clears_used_skills_this_round():
+    player = Player(name="Hero", player_class="Warrior")
+    player.used_skills_this_round = {"rally", "cleave"}
+    monster = Monster("goblin", hp=1000, attack=0)
+
+    resolve_attack(player, monster)
+
+    assert player.used_skills_this_round == set()

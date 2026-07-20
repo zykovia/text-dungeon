@@ -278,7 +278,10 @@ class Game:
             return
         for skill_name in self.player.skills:
             skill = self._skill_template(skill_name)
-            self.emit(f"- {skill.name} ({skill.mana_cost} mana): {skill.description}")
+            self.emit(
+                f"- {skill.name} ({skill.mana_cost} mana): {skill.description} "
+                f"Effect: {skill.effect_summary()}."
+            )
 
     def cast(self, skill_name: str) -> None:
         if skill_name not in self.player.skills:
@@ -286,6 +289,9 @@ class Game:
             return
 
         skill = self._skill_template(skill_name)
+        if skill_name in self.player.used_skills_this_round:
+            self.emit(f"You've already used {skill.name} this round.")
+            return
         if self.player.mana < skill.mana_cost:
             self.emit(
                 f"You don't have enough mana to cast {skill.name} ({skill.mana_cost} needed)."
@@ -293,22 +299,9 @@ class Game:
             return
 
         self.player.mana -= skill.mana_cost
-        if skill.heal:
-            healed = min(skill.heal, self.player.max_hp - self.player.hp)
-            self.player.hp += healed
-            self.emit(
-                f"You cast {skill.name} and recover {healed} HP. "
-                f"({self.player.hp}/{self.player.max_hp} HP)"
-            )
-        if skill.attack_buff:
-            self.player.pending_attack_buff += skill.attack_buff
-            self.emit(f"You channel {skill.name}, empowering your next attack.")
-        if skill.block:
-            self.player.pending_block = True
-            self.emit(f"You cast {skill.name}, readying yourself to block the next blow.")
-        if skill.monster_attack_debuff:
-            self.player.pending_monster_debuff += skill.monster_attack_debuff
-            self.emit(f"You cast {skill.name}, weakening your foe's next strike.")
+        self.player.used_skills_this_round.add(skill_name)
+        for effect in skill.effects:
+            self.emit(effect.apply(self.player, skill.name))
 
     def _map_lines(self) -> list[str]:
         return build_map_lines(
@@ -346,6 +339,7 @@ class Game:
                     "name": skill.name,
                     "description": skill.description,
                     "mana_cost": skill.mana_cost,
+                    "effect": skill.effect_summary(),
                 }
                 for skill in (self._skill_template(name) for name in self.player.skills)
             ],
