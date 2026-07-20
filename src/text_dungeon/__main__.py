@@ -1,3 +1,4 @@
+from .character import default_name_for_class
 from .game import Game
 from .templates import CLASS_TEMPLATES
 
@@ -14,9 +15,17 @@ def _prompt_for_class() -> str:
         print("Not a valid choice, try again.")
 
 
+def _prompt_for_name(player_class: str) -> str:
+    default_name = default_name_for_class(player_class)
+    print(f"Name your adventurer (press Enter for {default_name}):")
+    name = input("> ").strip()
+    return name or default_name
+
+
 def main() -> None:
     player_class = _prompt_for_class()
-    Game(player_class=player_class).run()
+    player_name = _prompt_for_name(player_class)
+    Game(player_class=player_class, player_name=player_name).run()
 
 
 if __name__ == "__main__":

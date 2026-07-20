@@ -7,6 +7,7 @@ from fastapi import Cookie, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from ..character import default_name_for_class
 from ..game import Game
 from ..persistence import delete_save, load_game, save_game
 from ..templates import CLASS_TEMPLATES
@@ -49,6 +50,13 @@ async def _choose_class(websocket: WebSocket) -> str:
     )
 
 
+async def _choose_name(websocket: WebSocket, player_class: str) -> str:
+    default_name = default_name_for_class(player_class)
+    await websocket.send_json({"type": "name_select", "default": default_name})
+    name = (await websocket.receive_text()).strip()
+    return name or default_name
+
+
 async def _resume_or_start(websocket: WebSocket, player_id: str | None) -> Game:
     if player_id is not None:
         try:
@@ -61,7 +69,8 @@ async def _resume_or_start(websocket: WebSocket, player_id: str | None) -> Game:
             saved.look()
             return saved
     player_class = await _choose_class(websocket)
-    game = Game(player_class=player_class)
+    player_name = await _choose_name(websocket, player_class)
+    game = Game(player_class=player_class, player_name=player_name)
     game.intro()
     return game
 

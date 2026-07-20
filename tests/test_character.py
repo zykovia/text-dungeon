@@ -21,6 +21,12 @@ def test_create_player_uses_given_name():
     assert player.name == "Grog"
 
 
+@pytest.mark.parametrize("template", CLASS_TEMPLATES, ids=lambda t: t.name)
+def test_create_player_falls_back_to_class_default_name(template):
+    player = create_player(template.name)
+    assert player.name == template.default_name
+
+
 def test_create_player_rejects_unknown_class():
     with pytest.raises(ValueError):
         create_player("Necromancer")

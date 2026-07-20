@@ -25,11 +25,19 @@ def _starting_item(class_template: ClassTemplate) -> Item:
     )
 
 
-def create_player(player_class: str, name: str = "Adventurer") -> Player:
-    """Build a fresh Player with the given class's starting stats and gear."""
+def default_name_for_class(player_class: str) -> str:
+    """The suggested adventurer name for a class, offered when the player picks no other."""
+    return _class_template(player_class).default_name
+
+
+def create_player(player_class: str, name: str | None = None) -> Player:
+    """Build a fresh Player with the given class's starting stats and gear.
+
+    A name left unset falls back to the class's default name.
+    """
     template = _class_template(player_class)
     return Player(
-        name=name,
+        name=name or template.default_name,
         player_class=template.name,
         hp=template.starting_hp,
         max_hp=template.starting_hp,
