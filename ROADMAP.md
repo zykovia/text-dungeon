@@ -19,19 +19,14 @@ These were part of the roadmap discussion but have already been built:
 - **Room spacing fix.** Dungeon generation no longer allows two unconnected
   rooms to land grid-adjacent to each other, so the minimap never implies a
   connection that doesn't exist.
+- **Character classes.** Players choose Warrior, Ranger, Cleric, or Wizard at
+  the start of a run (a CLI menu or a web class-select screen), each with its
+  own starting HP, attack, and starting weapon.
+- **Class-specific items.** Weapon items are restricted to the class they're
+  meant for; taking one as the wrong class is blocked and it stays in the
+  room. Generic items (health potions, bandages) stay usable by everyone.
 
 ## Planned
-
-### Character classes
-
-Add selectable classes: Warrior, Ranger, Cleric, Wizard. Each gets its own
-starting stats and starting gear.
-
-### Class-specific items
-
-Items found in the dungeon become class-restricted where it makes sense
-(weapons, class gear), while generic items (health potions, etc.) stay
-usable by everyone.
 
 ### Multiplayer: shared dungeon
 
@@ -75,7 +70,7 @@ saved per player. Sharing a dungeon across players means:
   respawns only relocate that one player?
 
 This deserves its own design pass before implementation starts, separate
-from the classes/items work, which is additive and self-contained by
+from the classes/items work, which was additive and self-contained by
 comparison.
 
 ## Other ideas raised alongside these
