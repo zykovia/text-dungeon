@@ -37,6 +37,15 @@ These were part of the roadmap discussion but have already been built:
   per-class mana pool and unlocked progressively as the player levels up.
   `cast <skill>` applies a heal, an attack buff, a full block, or an enemy
   debuff that carries into the very next `attack`.
+- **Weapon tiers.** Main-hand and off-hand items now come in 7 progressive
+  tiers, with drops alternating between the two slots so gear upgrades stay
+  balanced across a run.
+- **Once-per-round skill lockout.** Skill effects are implemented behind an
+  extensible interface, and a given skill can't be cast again until the next
+  round, preventing spam of the strongest effect.
+- **Item mechanics visible in UI.** Inventory and equip screens show each
+  item's mechanical effect (damage, armor, healing) instead of just its name,
+  so players can compare gear before equipping it.
 
 ## Planned
 
