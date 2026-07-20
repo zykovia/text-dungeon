@@ -51,6 +51,24 @@ def test_save_and_load_round_trips_equipped_gear(tmp_path):
     assert any(item.name == "rusty sword" for item in restored_again.player.inventory)
 
 
+def test_save_and_load_round_trips_skills_and_mana(tmp_path):
+    game = Game(seed=1, player_class="Cleric")
+    game.player.mana = 4
+    game.player.pending_attack_buff = 3
+    game.player.pending_block = True
+    game.player.pending_monster_debuff = 2
+
+    save_game("player-1c", game, save_dir=tmp_path)
+    restored = load_game("player-1c", save_dir=tmp_path)
+
+    assert restored.player.skills == ["heal"]
+    assert restored.player.max_mana == 10
+    assert restored.player.mana == 4
+    assert restored.player.pending_attack_buff == 3
+    assert restored.player.pending_block is True
+    assert restored.player.pending_monster_debuff == 2
+
+
 def test_save_and_load_round_trips_room_and_monster_state(tmp_path):
     game = Game(seed=1)
     room = game.current_room()

@@ -9,6 +9,8 @@ class ClassTemplate:
     starting_attack: int
     starting_item: str
     starting_offhand_item: str
+    starting_mana: int
+    starting_skill: str
     default_name: str
 
 
@@ -20,6 +22,8 @@ CLASS_TEMPLATES = [
         starting_attack=4,
         starting_item="rusty sword",
         starting_offhand_item="wooden shield",
+        starting_mana=6,
+        starting_skill="rally",
         default_name="Mulan",
     ),
     ClassTemplate(
@@ -29,6 +33,8 @@ CLASS_TEMPLATES = [
         starting_attack=3,
         starting_item="dagger",
         starting_offhand_item="hunting knife",
+        starting_mana=8,
+        starting_skill="quick shot",
         default_name="Hippolyta",
     ),
     ClassTemplate(
@@ -38,6 +44,8 @@ CLASS_TEMPLATES = [
         starting_attack=3,
         starting_item="mace",
         starting_offhand_item="holy symbol",
+        starting_mana=10,
+        starting_skill="heal",
         default_name="Margaret",
     ),
     ClassTemplate(
@@ -47,6 +55,8 @@ CLASS_TEMPLATES = [
         starting_attack=2,
         starting_item="apprentice staff",
         starting_offhand_item="spellbook",
+        starting_mana=12,
+        starting_skill="frost bolt",
         default_name="Yennefer",
     ),
 ]

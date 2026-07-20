@@ -104,25 +104,25 @@ body {
   overflow-x: auto;
 }
 
-#inventory-list, #equipment-list {
+#inventory-list, #equipment-list, #skills-list {
   list-style: none;
   margin: 0;
   padding: 0;
   font-size: 13px;
 }
 
-#inventory-list li, #equipment-list li {
+#inventory-list li, #equipment-list li, #skills-list li {
   display: flex;
   flex-direction: column;
   padding: 6px 0;
   border-top: 1px solid #145214;
 }
 
-#inventory-list li:first-child, #equipment-list li:first-child {
+#inventory-list li:first-child, #equipment-list li:first-child, #skills-list li:first-child {
   border-top: none;
 }
 
-#inventory-list li.empty {
+#inventory-list li.empty, #skills-list li.empty {
   opacity: 0.6;
   font-style: italic;
 }

@@ -302,3 +302,93 @@ def test_status_includes_equipment():
 
     assert equipment["main_hand"]["name"] == "rusty sword"
     assert equipment["off_hand"]["name"] == "wooden shield"
+
+
+def test_cast_heal_skill_restores_hp_and_consumes_mana():
+    game = Game(seed=1, player_class="Cleric")
+    game.player.hp = 5
+    start_mana = game.player.mana
+
+    game.cast("heal")
+
+    assert game.player.hp == 11
+    assert game.player.mana == start_mana - 3
+
+
+def test_cast_heal_skill_caps_at_max_hp():
+    game = Game(seed=1, player_class="Cleric")
+    game.player.hp = game.player.max_hp - 2
+
+    game.cast("heal")
+
+    assert game.player.hp == game.player.max_hp
+
+
+def test_cast_buff_skill_sets_pending_attack_buff():
+    game = Game(seed=1, player_class="Ranger")
+
+    game.cast("quick shot")
+
+    assert game.player.pending_attack_buff == 2
+
+
+def test_cast_block_skill_sets_pending_block():
+    game = Game(seed=1, player_class="Warrior")
+    game.player.skills.append("shield bash")
+
+    game.cast("shield bash")
+
+    assert game.player.pending_block is True
+
+
+def test_cast_debuff_skill_sets_pending_monster_debuff():
+    game = Game(seed=1, player_class="Ranger")
+    game.player.skills.append("snare")
+
+    game.cast("snare")
+
+    assert game.player.pending_monster_debuff == 3
+
+
+def test_cast_unknown_skill_reports_not_known():
+    game = Game(seed=1, player_class="Warrior")
+
+    game.cast("fireball")
+
+    assert "You don't know a skill called 'fireball'." in game.pop_output()
+    assert game.player.pending_attack_buff == 0
+
+
+def test_cast_with_insufficient_mana_is_refused():
+    game = Game(seed=1, player_class="Warrior")
+    game.player.mana = 0
+
+    game.cast("rally")
+
+    assert "You don't have enough mana to cast rally (2 needed)." in game.pop_output()
+    assert game.player.hp == game.player.max_hp
+
+
+def test_show_skills_lists_known_skills():
+    game = Game(seed=1, player_class="Warrior")
+
+    game.show_skills()
+
+    output = game.pop_output()
+    assert any("rally" in line and "2 mana" in line for line in output)
+
+
+def test_status_includes_mana_and_skills():
+    game = Game(seed=1, player_class="Warrior")
+
+    status = game.status()
+
+    assert status["mana"] == game.player.mana
+    assert status["max_mana"] == game.player.max_mana
+    assert status["skills"] == [
+        {
+            "name": "rally",
+            "description": "A battle cry that steadies your nerves and closes a wound.",
+            "mana_cost": 2,
+        }
+    ]

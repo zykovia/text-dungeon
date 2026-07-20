@@ -3,6 +3,7 @@ from .classes import CLASS_TEMPLATES, ClassTemplate
 from .items import ITEM_TEMPLATES, ItemTemplate
 from .monsters import MONSTER_TEMPLATES, MonsterTemplate
 from .rooms import ROOM_TEMPLATES, RoomTemplate
+from .skills import SKILL_TEMPLATES, SkillTemplate
 
 __all__ = [
     "BOSS",
@@ -15,6 +16,8 @@ __all__ = [
     "MonsterTemplate",
     "ROOM_TEMPLATES",
     "RoomTemplate",
+    "SKILL_TEMPLATES",
+    "SkillTemplate",
     "SUPER_BOSS",
     "WIN_ITEM_NAME",
 ]

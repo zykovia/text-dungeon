@@ -61,3 +61,41 @@ def test_resolve_attack_survivor_retaliates():
     assert result.monster_defeated is False
     assert result.incoming_damage > 0
     assert player.hp < start_hp
+
+
+def test_resolve_attack_pending_attack_buff_adds_damage_and_is_consumed():
+    player = Player(name="Hero", player_class="Warrior")
+    player.pending_attack_buff = 100
+    monster = Monster("goblin", hp=1000, attack=0)
+    result = resolve_attack(player, monster)
+    assert result.damage_dealt >= 100
+    assert player.pending_attack_buff == 0
+
+    second_result = resolve_attack(player, monster)
+    assert second_result.damage_dealt < 100
+
+
+def test_resolve_attack_pending_block_zeroes_incoming_damage_and_is_consumed():
+    player = Player(name="Hero", player_class="Warrior")
+    player.pending_block = True
+    monster = Monster("goblin", hp=1000, attack=50)
+    result = resolve_attack(player, monster)
+    assert result.incoming_damage == 0
+    assert player.hp == player.max_hp
+    assert player.pending_block is False
+
+    second_result = resolve_attack(player, monster)
+    assert second_result.incoming_damage > 0
+
+
+def test_resolve_attack_pending_monster_debuff_reduces_incoming_damage_and_is_consumed(monkeypatch):
+    monkeypatch.setattr("text_dungeon.combat.random.randint", lambda *_: 0)
+    player = Player(name="Hero", player_class="Warrior")
+    player.pending_monster_debuff = 100
+    monster = Monster("goblin", hp=1000, attack=5)
+    result = resolve_attack(player, monster)
+    assert result.incoming_damage == 0
+    assert player.pending_monster_debuff == 0
+
+    second_result = resolve_attack(player, monster)
+    assert second_result.incoming_damage > 0

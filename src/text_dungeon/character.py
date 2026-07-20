@@ -42,4 +42,7 @@ def create_player(player_class: str, name: str | None = None) -> Player:
         attack=template.starting_attack,
         main_hand=_starting_item(template.starting_item),
         off_hand=_starting_item(template.starting_offhand_item),
+        mana=template.starting_mana,
+        max_mana=template.starting_mana,
+        skills=[template.starting_skill],
     )

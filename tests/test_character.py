@@ -15,6 +15,9 @@ def test_create_player_applies_class_starting_stats_and_gear(template):
     assert player.inventory == []
     assert player.main_hand.name == template.starting_item
     assert player.off_hand.name == template.starting_offhand_item
+    assert player.mana == template.starting_mana
+    assert player.max_mana == template.starting_mana
+    assert player.skills == [template.starting_skill]
 
 
 def test_create_player_uses_given_name():
