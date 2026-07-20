@@ -3,7 +3,7 @@ from collections import deque
 from text_dungeon.balance import MAX_DUNGEON_LEVEL
 from text_dungeon.directions import DIRECTION_DELTAS, OPPOSITE_DIRECTION
 from text_dungeon.minimap import compute_coords
-from text_dungeon.templates import BOSS, SUPER_BOSS
+from text_dungeon.templates import BOSS, ITEM_TEMPLATES, SUPER_BOSS
 from text_dungeon.world import generate_dungeon, is_final_dungeon, room_count_range
 
 
@@ -101,6 +101,21 @@ def test_generate_dungeon_places_regular_boss_by_default():
 def test_generate_dungeon_places_super_boss_when_final():
     rooms = generate_dungeon(seed=42, final_boss=True)
     assert _boss_monster_room(rooms).monster.name == SUPER_BOSS.monster_name
+
+
+def test_generate_dungeon_spawned_items_keep_their_class_restriction():
+    # A randomly-spawned "rusty sword" etc. must stay Warrior-only; dropping
+    # player_class here would let any class pick up and wield class gear.
+    class_restricted = {t.name: t.player_class for t in ITEM_TEMPLATES if t.player_class}
+    checked_any = False
+    for seed in range(50):
+        rooms = generate_dungeon(seed=seed, min_rooms=18, max_rooms=22)
+        for room in rooms.values():
+            for item in room.items:
+                if item.name in class_restricted:
+                    checked_any = True
+                    assert item.player_class == class_restricted[item.name]
+    assert checked_any
 
 
 def test_generate_dungeon_never_places_unconnected_rooms_adjacent():

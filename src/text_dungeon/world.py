@@ -220,6 +220,7 @@ def generate_dungeon(
                     item_template.description,
                     heal=item_template.heal,
                     damage_bonus=item_template.damage_bonus,
+                    player_class=item_template.player_class,
                 )
             )
 
