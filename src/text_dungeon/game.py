@@ -128,7 +128,7 @@ class Game:
         if room.monster and room.monster.alive:
             self.emit(f"A {room.monster.name} blocks your path! ({room.monster.description})")
         if room.items:
-            names = ", ".join(item.name for item in room.items)
+            names = ", ".join(self._item_label(item) for item in room.items)
             self.emit(f"You see: {names}")
         self.emit(f"Exits: {', '.join(sorted(room.exits))}")
 
@@ -155,7 +155,7 @@ class Game:
                     return
                 room.items.remove(item)
                 self.player.inventory.append(item)
-                self.emit(f"You take the {item.name}.")
+                self.emit(f"You take the {self._item_label(item)}.")
                 if item.name == WIN_ITEM_NAME:
                     self.emit("")
                     self.emit(
@@ -176,10 +176,15 @@ class Game:
             self.emit("You aren't carrying anything else.")
             return
         for item in self.player.inventory:
-            self.emit(f"- {item.name}: {item.description}")
+            self.emit(f"- {self._item_label(item)}: {item.description}")
 
     def _equipped_line(self, item: Item | None) -> str:
-        return f"{item.name} ({item.description})" if item else "(empty)"
+        return f"{self._item_label(item)}: {item.description}" if item else "(empty)"
+
+    def _item_label(self, item: Item) -> str:
+        """An item's name plus its mechanical effect, e.g. 'rusty sword (+2 damage)'."""
+        effect = item.effect_summary()
+        return f"{item.name} ({effect})" if effect else item.name
 
     def equip(self, item_name: str) -> None:
         if self.player.main_hand and self.player.main_hand.name == item_name:
@@ -199,7 +204,7 @@ class Game:
                     self.player.inventory.append(previous)
                 self.player.inventory.remove(item)
                 setattr(self.player, item.slot, item)
-                self.emit(f"You equip the {item.name}.")
+                self.emit(f"You equip the {self._item_label(item)}.")
                 return
         self.emit(f"You don't have a '{item_name}'.")
 
@@ -209,7 +214,7 @@ class Game:
             if item is not None and item.name == item_name:
                 setattr(self.player, slot, None)
                 self.player.inventory.append(item)
-                self.emit(f"You unequip the {item.name}.")
+                self.emit(f"You unequip the {self._item_label(item)}.")
                 return
         self.emit(f"You don't have '{item_name}' equipped.")
 
@@ -331,7 +336,11 @@ class Game:
                 "off_hand": self._item_summary(self.player.off_hand),
             },
             "inventory": [
-                {"name": item.name, "description": item.description}
+                {
+                    "name": item.name,
+                    "description": item.description,
+                    "effect": item.effect_summary(),
+                }
                 for item in self.player.inventory
             ],
             "skills": [
@@ -347,7 +356,13 @@ class Game:
         }
 
     def _item_summary(self, item: Item | None) -> dict | None:
-        return {"name": item.name, "description": item.description} if item else None
+        if not item:
+            return None
+        return {
+            "name": item.name,
+            "description": item.description,
+            "effect": item.effect_summary(),
+        }
 
     def win(self) -> None:
         self.emit(

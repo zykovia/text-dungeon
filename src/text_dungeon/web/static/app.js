@@ -78,6 +78,12 @@ function renderStatus(status) {
       desc.className = "item-desc";
       desc.textContent = item.description;
       li.appendChild(desc);
+      if (item.effect) {
+        const effect = document.createElement("span");
+        effect.className = "skill-effect";
+        effect.textContent = item.effect;
+        li.appendChild(effect);
+      }
     }
     return li;
   }
