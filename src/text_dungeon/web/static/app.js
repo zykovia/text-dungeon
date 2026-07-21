@@ -10,7 +10,9 @@ const classText = document.getElementById("class-text");
 const levelText = document.getElementById("level-text");
 const xpText = document.getElementById("xp-text");
 const dungeonText = document.getElementById("dungeon-text");
-const mapDisplay = document.getElementById("map-display");
+const mapCanvas = document.getElementById("map-canvas");
+const mapCanvasCtx = mapCanvas.getContext("2d");
+const mapEmptyMessage = document.getElementById("map-empty-message");
 const equipmentList = document.getElementById("equipment-list");
 const skillsList = document.getElementById("skills-list");
 const inventoryList = document.getElementById("inventory-list");
@@ -31,6 +33,149 @@ const sidebar = document.getElementById("sidebar");
 const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 const sidebarToggle = document.getElementById("sidebar-toggle");
 
+const TILE_SIZE = 16;
+const TILE_SCALE = 2;
+
+const FLOOR_VARIANTS = [
+  "floor_1.png",
+  "floor_2.png",
+  "floor_3.png",
+  "floor_4.png",
+  "floor_5.png",
+  "floor_6.png",
+  "floor_7.png",
+  "floor_8.png",
+];
+const STAIRS_TILE = "floor_stairs.png";
+const WALL_TILE = "wall_mid.png";
+const CHEST_ICON = "chest_full_open_anim_f0.png";
+const FLASK_ICON = "flask_red.png";
+const WEAPON_ICON = "weapon_rusty_sword.png";
+
+const CLASS_SPRITES = {
+  Warrior: "knight_m_idle_anim_f0.png",
+  Ranger: "elf_m_idle_anim_f0.png",
+  Cleric: "dwarf_m_idle_anim_f0.png",
+  Wizard: "wizzard_m_idle_anim_f0.png",
+};
+
+const MONSTER_SPRITES = {
+  skeleton: "skelet_idle_anim_f0.png",
+  "giant rat": "wogol_idle_anim_f0.png",
+  "cave spider": "chort_idle_anim_f0.png",
+  shade: "muddy_anim_f0.png",
+  "Dungeon Lord": "masked_orc_idle_anim_f0.png",
+  "Dungeon Emperor": "big_demon_idle_anim_f0.png",
+};
+
+const HEAL_ITEM_NAMES = new Set(["health potion", "bandage"]);
+const WIN_ITEM_NAME = "golden crown";
+
+const SPRITE_FILES = [
+  ...FLOOR_VARIANTS,
+  STAIRS_TILE,
+  WALL_TILE,
+  CHEST_ICON,
+  FLASK_ICON,
+  WEAPON_ICON,
+  ...Object.values(CLASS_SPRITES),
+  ...Object.values(MONSTER_SPRITES),
+];
+
+let lastRoomsRendered = null;
+
+const sprites = {};
+SPRITE_FILES.forEach((file) => {
+  const img = new Image();
+  img.onload = () => renderMap(lastRoomsRendered);
+  img.src = `/static/tiles/${file}`;
+  sprites[file] = img;
+});
+
+function itemIconFor(itemName) {
+  if (itemName === WIN_ITEM_NAME) return CHEST_ICON;
+  if (HEAL_ITEM_NAMES.has(itemName)) return FLASK_ICON;
+  return WEAPON_ICON;
+}
+
+// Deterministic pick so a given room always shows the same floor variant.
+function floorVariantFor(roomId) {
+  let hash = 0;
+  for (let i = 0; i < roomId.length; i++) {
+    hash = (hash + roomId.charCodeAt(i)) % FLOOR_VARIANTS.length;
+  }
+  return FLOOR_VARIANTS[hash];
+}
+
+function drawSprite(file, cellX, cellY) {
+  const img = sprites[file];
+  if (!img || !img.complete) return;
+  const destSize = TILE_SIZE * TILE_SCALE;
+  // Sprites narrower/wider than one tile get scaled to fit the tile's width,
+  // keeping aspect ratio; taller sprites then overflow upward, so they're
+  // anchored to the tile's bottom edge rather than its top.
+  const drawWidth = destSize;
+  const drawHeight = img.naturalWidth ? (img.naturalHeight / img.naturalWidth) * drawWidth : destSize;
+  const dx = cellX * destSize;
+  const dy = cellY * destSize + (destSize - drawHeight);
+  mapCanvasCtx.drawImage(img, dx, dy, drawWidth, drawHeight);
+}
+
+function renderMap(rooms) {
+  const roomIds = Object.keys(rooms || {});
+  if (roomIds.length === 0) {
+    mapCanvas.classList.add("hidden");
+    mapEmptyMessage.classList.remove("hidden");
+    return;
+  }
+  mapCanvas.classList.remove("hidden");
+  mapEmptyMessage.classList.add("hidden");
+
+  const xs = roomIds.map((id) => rooms[id].x);
+  const ys = roomIds.map((id) => rooms[id].y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const cols = maxX - minX + 1;
+  const rows = maxY - minY + 1;
+  const destTile = TILE_SIZE * TILE_SCALE;
+
+  mapCanvas.width = cols * destTile;
+  mapCanvas.height = rows * destTile;
+  mapCanvasCtx.imageSmoothingEnabled = false;
+
+  const roomAt = {};
+  roomIds.forEach((id) => {
+    roomAt[`${rooms[id].x},${rooms[id].y}`] = id;
+  });
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const cellX = x - minX;
+      // North (+y) is drawn at the top, matching the ASCII map's convention.
+      const cellY = maxY - y;
+      const roomId = roomAt[`${x},${y}`];
+      if (roomId === undefined) {
+        drawSprite(WALL_TILE, cellX, cellY);
+        continue;
+      }
+      const room = rooms[roomId];
+      drawSprite(room.auto_advance ? STAIRS_TILE : floorVariantFor(roomId), cellX, cellY);
+      room.items.forEach((itemName) => drawSprite(itemIconFor(itemName), cellX, cellY));
+      if (room.monster && MONSTER_SPRITES[room.monster]) {
+        drawSprite(MONSTER_SPRITES[room.monster], cellX, cellY);
+      }
+      if (room.current) {
+        const spriteFile = CLASS_SPRITES[currentPlayerClass];
+        if (spriteFile) drawSprite(spriteFile, cellX, cellY);
+      }
+    }
+  }
+}
+
+let currentPlayerClass = null;
+
 function appendLine(text, className) {
   const div = document.createElement("div");
   div.textContent = text === "" ? " " : text;
@@ -43,11 +188,6 @@ function appendLine(text, className) {
 
 function appendLines(lines) {
   lines.forEach((line) => appendLine(line));
-}
-
-function formatMapLines(lines) {
-  const rows = lines.filter((line) => line !== "" && line !== "Map:");
-  return rows.join("\n");
 }
 
 function renderStatus(status) {
@@ -68,7 +208,9 @@ function renderStatus(status) {
   xpText.textContent = `${status.xp}/${status.xp_per_level}`;
   dungeonText.textContent = `${status.dungeon_level}/${status.max_dungeon_level}`;
 
-  mapDisplay.textContent = formatMapLines(status.map_lines) || "You haven't explored anywhere yet.";
+  currentPlayerClass = status.player_class;
+  lastRoomsRendered = status.rooms;
+  renderMap(status.rooms);
 
   function itemRow(label, item) {
     const li = document.createElement("li");

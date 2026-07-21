@@ -6,7 +6,7 @@ from .character import DEFAULT_PLAYER_CLASS, create_player
 from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
-from .minimap import compute_coords
+from .minimap import compute_coords, room_snapshots
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
 from .templates import BOSS, MAX_ITEM_TIER, SUPER_BOSS, WIN_ITEM_NAME, skill_template_for
@@ -295,6 +295,11 @@ class Game:
         for line in self._map_lines():
             self.emit(line)
 
+    def _known_rooms(self) -> dict[str, dict]:
+        return room_snapshots(
+            self.rooms, self.coords, self.player.visited, self.player.current_room
+        )
+
     def status(self) -> dict:
         """A snapshot of everything a UI needs for a stats/map/inventory sidebar."""
         return {
@@ -329,6 +334,7 @@ class Game:
                 for skill in (skill_template_for(name) for name in self.player.skills)
             ],
             "map_lines": self._map_lines(),
+            "rooms": self._known_rooms(),
         }
 
     def win(self) -> None:

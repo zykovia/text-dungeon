@@ -356,6 +356,36 @@ def test_status_includes_equipment():
     assert equipment["off_hand"]["name"] == "wooden shield"
 
 
+def test_status_rooms_grows_to_include_the_next_rooms_neighbors_after_moving():
+    game = Game(seed=1)
+    game.look()
+    entrance_id = game.player.current_room
+    entrance_room = game.current_room()
+    direction, destination = next(iter(entrance_room.exits.items()))
+
+    assert set(game.status()["rooms"]) == {entrance_id, *entrance_room.exits.values()}
+
+    game.move(direction)
+
+    known = set(game.status()["rooms"])
+    expected = {entrance_id, *entrance_room.exits.values()}
+    expected.update(game.rooms[destination].exits.values())
+    assert known == expected
+
+
+def test_status_rooms_drops_a_taken_item():
+    game = Game(seed=1)
+    game.look()
+    room = game.current_room()
+    room.items.append(Item("test item", "A thing.", damage_bonus=1))
+
+    assert game.status()["rooms"][room.id]["items"] == ["test item"]
+
+    game.take("test item")
+
+    assert game.status()["rooms"][room.id]["items"] == []
+
+
 def test_cast_heal_skill_restores_hp_and_consumes_mana():
     game = Game(seed=1, player_class="Cleric")
     game.player.hp = 5

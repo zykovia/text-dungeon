@@ -1,0 +1,7 @@
+Tiles and sprites in this directory are a subset of:
+
+  16x16 DungeonTileset II by 0x72
+  https://0x72.itch.io/dungeontileset-ii
+
+Licensed CC0 1.0 Universal (public domain). Attribution is not required by
+the license; this file exists for provenance.

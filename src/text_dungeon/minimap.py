@@ -27,6 +27,45 @@ def compute_coords(rooms: dict[str, Room], start: str = "entrance") -> dict[str,
     return coords
 
 
+def _known_room_ids(rooms: dict[str, Room], visited: set[str]) -> set[str]:
+    """Every room the player has been in, plus its immediate unvisited neighbors.
+
+    This is the one definition of "fog of war": what's revealed on the map
+    beyond rooms actually stepped in.
+    """
+    known = set(visited)
+    for room_id in visited:
+        known.update(rooms[room_id].exits.values())
+    return known
+
+
+def room_snapshots(
+    rooms: dict[str, Room],
+    coords: dict[str, tuple[int, int]],
+    visited: set[str],
+    current_room: str,
+) -> dict[str, dict]:
+    """A UI-facing snapshot of every known room: position, and what's in it.
+
+    Scoped to the same known set as render_map, so a 2D map and the ASCII
+    map always agree on what's revealed.
+    """
+    snapshots = {}
+    for room_id in _known_room_ids(rooms, visited):
+        room = rooms[room_id]
+        x, y = coords[room_id]
+        snapshots[room_id] = {
+            "x": x,
+            "y": y,
+            "current": room_id == current_room,
+            "visited": room_id in visited,
+            "auto_advance": room.auto_advance,
+            "monster": room.monster.name if room.monster and room.monster.alive else None,
+            "items": [item.name for item in room.items],
+        }
+    return snapshots
+
+
 def render_map(
     rooms: dict[str, Room],
     coords: dict[str, tuple[int, int]],
@@ -37,9 +76,7 @@ def render_map(
     if not visited:
         return ["You haven't explored anywhere yet."]
 
-    known = set(visited)
-    for room_id in visited:
-        known.update(rooms[room_id].exits.values())
+    known = _known_room_ids(rooms, visited)
 
     xs = [coords[room_id][0] for room_id in known]
     ys = [coords[room_id][1] for room_id in known]
