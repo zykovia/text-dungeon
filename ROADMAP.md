@@ -97,24 +97,26 @@ that all happen to live in the one service as it does today.
 
 "Multiplayer" and "persistent world" are really the same architectural
 pivot. Today, `Game` owns exactly one player and one dungeon, generated and
-saved per player. Sharing a dungeon across players means:
+saved per player. The design pass this note used to call for is done — see
+`MULTIPLAYER-DESIGN.md` for the full write-up. Short version:
 
-- The dungeon (rooms, monster HP, items) becomes a *world* object independent
-  of any single player, persisted under its own id instead of a player's.
-- Every connected player needs to see the effects of everyone else's actions
-  in real time (someone else kills the monster in your room, takes the
-  item), which means a broadcast layer per world, not just per-connection
-  request/response like today.
+- The dungeon becomes a `World` object independent of any single player,
+  holding every dungeon level's rooms persistently (generated once, never
+  discarded) so different players can be on different levels of the same
+  world at once.
+- Killing a boss only advances the player who did it to the next level;
+  it's not a whole-world event, which sidesteps needing a broadcast-driven
+  mass relocation.
+- Every connected player still needs to see the effects of others' actions
+  in their own room in real time (someone else fights the room's monster,
+  takes an item), which needs a broadcast layer, scoped per room rather
+  than per world.
 - Concurrent mutation of shared state (two players attacking the same
-  monster) needs to be made safe.
-- Player identity, position, inventory, and XP stay per-player, but "respawn"
-  and "advance to the next dungeon" become world-level events that need a
-  policy: does the whole world advance when anyone kills the boss, or do
-  respawns only relocate that one player?
-
-This deserves its own design pass before implementation starts, separate
-from the classes/items work, which was additive and self-contained by
-comparison.
+  monster) turns out to need no explicit locking, as long as this stays a
+  single-process deployment — the reasoning is in the design doc.
+- Persistence reshapes: rooms move into a per-world save, separate from each
+  player's own (smaller) save. This is a real schema change and will need a
+  `SAVE_VERSION` bump when it ships, unlike the world-select work.
 
 ## Other ideas raised alongside these
 
