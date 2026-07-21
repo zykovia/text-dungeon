@@ -214,3 +214,8 @@ SKILL_TEMPLATES = [
         effects=(AttackBuff(8),),
     ),
 ]
+
+
+def skill_template_for(skill_name: str) -> SkillTemplate | None:
+    """The template for a known skill by name, if any."""
+    return next((skill for skill in SKILL_TEMPLATES if skill.name == skill_name), None)

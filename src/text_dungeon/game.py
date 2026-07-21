@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import history
+from . import history, inventory, skills
 from .balance import MAX_DUNGEON_LEVEL
 from .character import DEFAULT_PLAYER_CLASS, create_player
 from .combat import resolve_attack
@@ -8,8 +8,8 @@ from .commands import handle_command as dispatch_command
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
 from .minimap import compute_coords
 from .minimap import render_map as build_map_lines
-from .models import Item, Player, Room
-from .templates import BOSS, MAX_ITEM_TIER, SKILL_TEMPLATES, SUPER_BOSS, WIN_ITEM_NAME
+from .models import Player, Room
+from .templates import BOSS, MAX_ITEM_TIER, SUPER_BOSS, WIN_ITEM_NAME, skill_template_for
 from .world import generate_dungeon, is_final_dungeon, room_count_range
 
 
@@ -128,7 +128,7 @@ class Game:
         if room.monster and room.monster.alive:
             self.emit(f"A {room.monster.name} blocks your path! ({room.monster.description})")
         if room.items:
-            names = ", ".join(self._item_label(item) for item in room.items)
+            names = ", ".join(inventory.item_label(item) for item in room.items)
             self.emit(f"You see: {names}")
         self.emit(f"Exits: {', '.join(sorted(room.exits))}")
 
@@ -154,49 +154,28 @@ class Game:
         self.look()
 
     def take(self, item_name: str) -> None:
-        room = self.current_room()
-        for item in room.items:
-            if item.name == item_name:
-                if item.player_class is not None and item.player_class != self.player.player_class:
-                    self.emit(f"Only a {item.player_class} can wield the {item.name}.")
-                    return
-                room.items.remove(item)
-                self.player.inventory.append(item)
-                self.emit(f"You take the {self._item_label(item)}.")
-                if item.name == WIN_ITEM_NAME:
-                    self.emit("")
-                    self.emit(
-                        "You place the golden crown upon your head. "
-                        "The dungeon trembles and falls silent."
-                    )
-                    if is_final_dungeon(self.player.dungeon_level):
-                        self.win()
-                    else:
-                        self.advance()
-                return
-        self.emit(f"There's no '{item_name}' here.")
+        result = inventory.take_item(self.player, self.current_room(), item_name)
+        if result.item is None:
+            self.emit(f"There's no '{item_name}' here.")
+            return
+        if result.blocked_by_class:
+            self.emit(f"Only a {result.item.player_class} can wield the {result.item.name}.")
+            return
+        self.emit(f"You take the {inventory.item_label(result.item)}.")
+        if result.item.name == WIN_ITEM_NAME:
+            self.emit("")
+            self.emit(
+                "You place the golden crown upon your head. "
+                "The dungeon trembles and falls silent."
+            )
+            if is_final_dungeon(self.player.dungeon_level):
+                self.win()
+            else:
+                self.advance()
 
     def show_inventory(self) -> None:
-        self.emit(f"Main hand: {self._equipped_line(self.player.main_hand)}")
-        self.emit(f"Off hand: {self._equipped_line(self.player.off_hand)}")
-        active = [item for item in self.player.inventory if not item.retired]
-        retired = [item for item in self.player.inventory if item.retired]
-        if not active and not retired:
-            self.emit("You aren't carrying anything else.")
-            return
-        for item in active:
-            self.emit(f"- {self._item_label(item)}: {item.description}")
-        if retired:
-            names = ", ".join(item.name for item in retired)
-            self.emit(f"- Old gear ({len(retired)}): {names}")
-
-    def _equipped_line(self, item: Item | None) -> str:
-        return f"{self._item_label(item)}: {item.description}" if item else "(empty)"
-
-    def _item_label(self, item: Item) -> str:
-        """An item's name plus its mechanical effect, e.g. 'rusty sword (+2 damage)'."""
-        effect = item.effect_summary()
-        return f"{item.name} ({effect})" if effect else item.name
+        for line in inventory.inventory_lines(self.player):
+            self.emit(line)
 
     def equip(self, item_name: str) -> None:
         if self.player.main_hand and self.player.main_hand.name == item_name:
@@ -206,31 +185,22 @@ class Game:
             self.emit(f"You already have the {item_name} equipped.")
             return
 
-        for item in self.player.inventory:
-            if item.name == item_name:
-                if item.slot is None:
-                    self.emit(f"You can't equip the {item.name}.")
-                    return
-                previous = getattr(self.player, item.slot)
-                if previous is not None:
-                    previous.retired = True
-                    self.player.inventory.append(previous)
-                item.retired = False
-                self.player.inventory.remove(item)
-                setattr(self.player, item.slot, item)
-                self.emit(f"You equip the {self._item_label(item)}.")
-                return
-        self.emit(f"You don't have a '{item_name}'.")
+        item = next((i for i in self.player.inventory if i.name == item_name), None)
+        if item is None:
+            self.emit(f"You don't have a '{item_name}'.")
+            return
+        if item.slot is None:
+            self.emit(f"You can't equip the {item.name}.")
+            return
+        inventory.equip_item(self.player, item)
+        self.emit(f"You equip the {inventory.item_label(item)}.")
 
     def unequip(self, item_name: str) -> None:
-        for slot in ("main_hand", "off_hand"):
-            item = getattr(self.player, slot)
-            if item is not None and item.name == item_name:
-                setattr(self.player, slot, None)
-                self.player.inventory.append(item)
-                self.emit(f"You unequip the {self._item_label(item)}.")
-                return
-        self.emit(f"You don't have '{item_name}' equipped.")
+        item = inventory.unequip_item(self.player, item_name)
+        if item is None:
+            self.emit(f"You don't have '{item_name}' equipped.")
+            return
+        self.emit(f"You unequip the {inventory.item_label(item)}.")
 
     def current_dungeon_history(self) -> list[str]:
         return history.current_dungeon_history(self.player)
@@ -275,30 +245,24 @@ class Game:
         )
 
     def use(self, item_name: str) -> None:
-        for item in self.player.inventory:
-            if item.name == item_name:
-                if item.heal:
-                    healed = min(item.heal, self.player.max_hp - self.player.hp)
-                    self.player.hp += healed
-                    self.player.inventory.remove(item)
-                    self.emit(
-                        f"You use the {item.name} and recover {healed} HP. "
-                        f"({self.player.hp}/{self.player.max_hp} HP)"
-                    )
-                else:
-                    self.emit(f"You can't use the {item.name} right now.")
-                return
-        self.emit(f"You don't have a '{item_name}'.")
-
-    def _skill_template(self, skill_name: str):
-        return next((s for s in SKILL_TEMPLATES if s.name == skill_name), None)
+        result = inventory.use_item(self.player, item_name)
+        if result.item is None:
+            self.emit(f"You don't have a '{item_name}'.")
+            return
+        if not result.item.heal:
+            self.emit(f"You can't use the {result.item.name} right now.")
+            return
+        self.emit(
+            f"You use the {result.item.name} and recover {result.healed} HP. "
+            f"({self.player.hp}/{self.player.max_hp} HP)"
+        )
 
     def show_skills(self) -> None:
         if not self.player.skills:
             self.emit("You don't know any skills yet.")
             return
         for skill_name in self.player.skills:
-            skill = self._skill_template(skill_name)
+            skill = skill_template_for(skill_name)
             self.emit(
                 f"- {skill.name} ({skill.mana_cost} mana): {skill.description} "
                 f"Effect: {skill.effect_summary()}."
@@ -309,7 +273,7 @@ class Game:
             self.emit(f"You don't know a skill called '{skill_name}'.")
             return
 
-        skill = self._skill_template(skill_name)
+        skill = skill_template_for(skill_name)
         if skill_name in self.player.used_skills_this_round:
             self.emit(f"You've already used {skill.name} this round.")
             return
@@ -319,10 +283,8 @@ class Game:
             )
             return
 
-        self.player.mana -= skill.mana_cost
-        self.player.used_skills_this_round.add(skill_name)
-        for effect in skill.effects:
-            self.emit(effect.apply(self.player, skill.name))
+        for message in skills.apply_skill(self.player, skill):
+            self.emit(message)
 
     def _map_lines(self) -> list[str]:
         return build_map_lines(
@@ -348,15 +310,11 @@ class Game:
             "dungeon_level": self.player.dungeon_level,
             "max_dungeon_level": MAX_DUNGEON_LEVEL,
             "equipment": {
-                "main_hand": self._item_summary(self.player.main_hand),
-                "off_hand": self._item_summary(self.player.off_hand),
+                "main_hand": inventory.item_summary(self.player.main_hand),
+                "off_hand": inventory.item_summary(self.player.off_hand),
             },
             "inventory": [
-                {
-                    "name": item.name,
-                    "description": item.description,
-                    "effect": item.effect_summary(),
-                }
+                inventory.item_summary(item)
                 for item in self.player.inventory
                 if not item.retired
             ],
@@ -368,18 +326,9 @@ class Game:
                     "mana_cost": skill.mana_cost,
                     "effect": skill.effect_summary(),
                 }
-                for skill in (self._skill_template(name) for name in self.player.skills)
+                for skill in (skill_template_for(name) for name in self.player.skills)
             ],
             "map_lines": self._map_lines(),
-        }
-
-    def _item_summary(self, item: Item | None) -> dict | None:
-        if not item:
-            return None
-        return {
-            "name": item.name,
-            "description": item.description,
-            "effect": item.effect_summary(),
         }
 
     def win(self) -> None:

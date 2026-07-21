@@ -9,7 +9,7 @@ from .items import (
 )
 from .monsters import MONSTER_TEMPLATES, MonsterTemplate
 from .rooms import ROOM_TEMPLATES, RoomTemplate
-from .skills import SKILL_TEMPLATES, SkillTemplate
+from .skills import SKILL_TEMPLATES, SkillTemplate, skill_template_for
 
 __all__ = [
     "BOSS",
@@ -29,4 +29,5 @@ __all__ = [
     "SUPER_BOSS",
     "WIN_ITEM_NAME",
     "item_template_for",
+    "skill_template_for",
 ]
