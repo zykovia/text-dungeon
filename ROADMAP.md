@@ -59,6 +59,11 @@ These were part of the roadmap discussion but have already been built:
   following the same pure-function-plus-result-object pattern already used
   by `combat.py`/`leveling.py`, so `game.py` now narrates outcomes instead of
   also implementing them. No behavior change.
+- **Test coverage and dev tooling.** `inventory.py` and `skills.py` gained
+  direct unit tests (mirroring the existing `test_combat.py`/
+  `test_leveling.py` convention) covering every branch, bringing both
+  modules to 100% coverage. Added `ruff` (lint) and `pytest-cov` (coverage)
+  as dev dependencies, plus `scripts/check.sh` to run both in one command.
 
 ## Planned
 
