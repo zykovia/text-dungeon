@@ -1,4 +1,5 @@
 from text_dungeon.models import Player
+from text_dungeon.skills import apply_skill
 from text_dungeon.templates.skills import (
     SKILL_TEMPLATES,
     AttackBuff,
@@ -73,3 +74,24 @@ def test_skill_effect_summary_for_single_effect_skill():
     skill = _skill("shield bash")
 
     assert skill.effect_summary() == "blocks the monster's next attack"
+
+
+def test_apply_skill_deducts_mana_and_marks_used_this_round():
+    player = Player(name="test", player_class="Warrior", mana=5, max_mana=5, hp=10, max_hp=20)
+    skill = _skill("rally")
+
+    messages = apply_skill(player, skill)
+
+    assert player.mana == 3
+    assert player.used_skills_this_round == {"rally"}
+    assert player.hp == 14
+    assert messages == ["You cast rally and recover 4 HP. (14/20 HP)"]
+
+
+def test_apply_skill_returns_one_message_per_effect():
+    player = Player(name="test", player_class="Wizard", mana=10, max_mana=10)
+    skill = _skill("drain life")
+
+    messages = apply_skill(player, skill)
+
+    assert len(messages) == len(skill.effects) == 2
