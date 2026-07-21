@@ -15,6 +15,9 @@ const equipmentList = document.getElementById("equipment-list");
 const skillsList = document.getElementById("skills-list");
 const inventoryList = document.getElementById("inventory-list");
 
+const worldSelect = document.getElementById("world-select");
+const worldOptions = document.getElementById("world-options");
+
 const classSelect = document.getElementById("class-select");
 const classOptions = document.getElementById("class-options");
 
@@ -146,6 +149,54 @@ function renderStatus(status) {
   }
 }
 
+const LAST_WORLD_ID_KEY = "lastWorldId";
+
+function characterSummaryText(character) {
+  return (
+    `${character.name} the ${character.player_class} — Level ${character.level}, ` +
+    `Dungeon ${character.dungeon_level}/${character.max_dungeon_level}, ` +
+    `HP ${character.hp}/${character.max_hp}, ${character.item_count} item(s)`
+  );
+}
+
+function showWorldSelect(options, onChoose) {
+  const remembered = localStorage.getItem(LAST_WORLD_ID_KEY);
+  if (remembered && options.some((option) => option.id === remembered)) {
+    onChoose(remembered);
+    return;
+  }
+
+  input.disabled = true;
+  worldOptions.innerHTML = "";
+  options.forEach((option) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "class-option";
+    const name = document.createElement("span");
+    name.className = "class-option-name";
+    name.textContent = option.name;
+    const desc = document.createElement("span");
+    desc.className = "class-option-desc";
+    desc.textContent = option.description;
+    button.appendChild(name);
+    button.appendChild(desc);
+    if (option.character) {
+      const character = document.createElement("span");
+      character.className = "class-option-character";
+      character.textContent = characterSummaryText(option.character);
+      button.appendChild(character);
+    }
+    button.addEventListener("click", () => {
+      onChoose(option.id);
+      worldSelect.classList.add("hidden");
+      input.disabled = false;
+      input.focus();
+    });
+    worldOptions.appendChild(button);
+  });
+  worldSelect.classList.remove("hidden");
+}
+
 function showClassSelect(options, onChoose) {
   input.disabled = true;
   classOptions.innerHTML = "";
@@ -230,6 +281,13 @@ function connect() {
 
   socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
+    if (data.type === "world_select") {
+      showWorldSelect(data.options, (chosenId) => {
+        localStorage.setItem(LAST_WORLD_ID_KEY, chosenId);
+        socket.send(chosenId);
+      });
+      return;
+    }
     if (data.type === "class_select") {
       showClassSelect(data.options, (chosenName) => socket.send(chosenName));
       return;

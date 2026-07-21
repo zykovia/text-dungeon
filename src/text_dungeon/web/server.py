@@ -9,8 +9,8 @@ from fastapi.staticfiles import StaticFiles
 
 from ..character import default_name_for_class
 from ..game import Game
-from ..persistence import delete_save, load_game, save_game
-from ..templates import CLASS_TEMPLATES
+from ..persistence import delete_save, load_game, load_summary, save_game
+from ..templates import CLASS_TEMPLATES, WORLD_TEMPLATES
 
 STATIC_DIR = Path(__file__).parent / "static"
 PLAYER_ID_COOKIE = "player_id"
@@ -32,6 +32,32 @@ async def index(player_id: str | None = Cookie(default=None)) -> FileResponse:
             samesite="lax",
         )
     return response
+
+
+async def _choose_world(websocket: WebSocket, player_id: str | None) -> str:
+    await websocket.send_json(
+        {
+            "type": "world_select",
+            "options": [
+                {
+                    "id": t.id,
+                    "name": t.name,
+                    "description": t.description,
+                    "character": load_summary(t.id, player_id) if player_id else None,
+                }
+                for t in WORLD_TEMPLATES
+            ],
+        }
+    )
+    choice = (await websocket.receive_text()).strip()
+    return next(
+        (
+            t.id
+            for t in WORLD_TEMPLATES
+            if t.id == choice or t.name.lower() == choice.lower()
+        ),
+        WORLD_TEMPLATES[0].id,
+    )
 
 
 async def _choose_class(websocket: WebSocket) -> str:
@@ -57,10 +83,10 @@ async def _choose_name(websocket: WebSocket, player_class: str) -> str:
     return name or default_name
 
 
-async def _resume_or_start(websocket: WebSocket, player_id: str | None) -> Game:
+async def _resume_or_start(websocket: WebSocket, world_id: str, player_id: str | None) -> Game:
     if player_id is not None:
         try:
-            saved = load_game(player_id)
+            saved = load_game(world_id, player_id)
         except (OSError, ValueError, KeyError):
             saved = None
         if saved is not None and saved.running:
@@ -78,13 +104,14 @@ async def _resume_or_start(websocket: WebSocket, player_id: str | None) -> Game:
 @app.websocket("/ws")
 async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None)) -> None:
     await websocket.accept()
-    game = await _resume_or_start(websocket, player_id)
+    world_id = await _choose_world(websocket, player_id)
+    game = await _resume_or_start(websocket, world_id, player_id)
     player_id = player_id or str(uuid.uuid4())
 
     await websocket.send_json(
         {"lines": game.pop_output(), "status": game.status(), "game_over": False}
     )
-    save_game(player_id, game)
+    save_game(world_id, player_id, game)
 
     try:
         while True:
@@ -101,9 +128,9 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
                 {"lines": game.pop_output(), "status": game.status(), "game_over": game_over}
             )
             if game_over:
-                delete_save(player_id)
+                delete_save(world_id, player_id)
                 break
-            save_game(player_id, game)
+            save_game(world_id, player_id, game)
     except WebSocketDisconnect:
         pass
 
