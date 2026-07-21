@@ -75,6 +75,16 @@ These were part of the roadmap discussion but have already been built:
   solo-per-player (no shared/concurrent state between players in a world
   yet) and there are no new containers. The multi-container routing part of
   the original design is still future work, noted below.
+- **2D tile map (first increment).** The web sidebar's ASCII map now
+  renders as a real tile map, using a CC0 tileset (0x72 DungeonTileset II):
+  floor tiles, a class-matched player sprite on the current room, and
+  monster/item sprites on known neighboring rooms, all drawn on a canvas
+  scoped to the same fog-of-war rule the ASCII map already used. This
+  covers Phases 1-4 of `2D-GRAPHICS-PLAN.md` in one pass. Deliberately out
+  of scope: motion/animation (still Phase 5), true neighbor-aware
+  autotiling (one flat wall tile fills every non-room cell instead of
+  directional wall pieces), and per-exact-item-name icons (a three-way
+  heal/crown/generic-weapon rule stands in for all ~58 named items).
 
 ## Planned
 
@@ -125,5 +135,6 @@ Not yet committed to, but worth keeping in mind as the above lands:
 - Player presence/chat once multiplayer exists (e.g. "Aragorn entered the
   room").
 - A leaderboard or hall of fame for completed runs.
-- 2D graphics with stock assets, replacing the text-based web client with a
-  tile map. Phased approach written up in `2D-GRAPHICS-PLAN.md`.
+- 2D graphics polish: motion/animation, real autotiling, and per-item icons
+  (Phase 5 and the deferred pieces of Phases 3-4 in `2D-GRAPHICS-PLAN.md`),
+  now that the first increment has shipped above.
