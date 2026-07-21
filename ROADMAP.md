@@ -119,3 +119,5 @@ Not yet committed to, but worth keeping in mind as the above lands:
 - Player presence/chat once multiplayer exists (e.g. "Aragorn entered the
   room").
 - A leaderboard or hall of fame for completed runs.
+- 2D graphics with stock assets, replacing the text-based web client with a
+  tile map. Phased approach written up in `2D-GRAPHICS-PLAN.md`.
