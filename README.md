@@ -32,6 +32,11 @@ in the current dungeon) whenever that browser reconnects to that world,
 including after a server restart. The save is deleted once the game ends
 (winning or quitting), so your next visit to that world starts a fresh run.
 
+The sidebar's map panel renders the rooms you've explored as a small 2D tile
+map (floor/wall tiles, your class's sprite, monsters, and items) instead of
+plain ASCII, using a CC0 tileset (credited in
+`src/text_dungeon/web/static/tiles/CREDITS.txt`).
+
 Without Compose:
 
 ```bash
