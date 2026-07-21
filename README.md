@@ -3,16 +3,19 @@
 A small text-based dungeon crawler written in Python. Play it in a terminal,
 or as a browser game served over WebSocket.
 
-Each run generates a fresh, randomly laid-out dungeon (6-10 rooms), so no two
+Pick a class, Warrior, Ranger, Cleric, or Wizard, each with its own starting
+HP, weapon, and set of skills/spells unlocked as you level up. Each run
+generates a fresh, randomly laid-out dungeon (6-10 rooms), so no two
 playthroughs are the same. Defeating monsters earns experience; reaching 10 XP
 levels you up (+5 max HP, full heal). Dying doesn't end the game: you wake up
-at the entrance of a brand new dungeon, keeping your inventory, level, and XP.
+at the entrance of a brand new dungeon, keeping your class, gear, level, and
+XP.
 
-Defeating the boss and taking the crown descends you into a new dungeon too,
-2 rooms larger (both min and max) than the one before, keeping your gear,
-level, and XP. This happens up to 7 dungeons deep; the 7th holds the Dungeon
-Emperor, a much tougher super boss. Defeat it and take its crown to win the
-game for good.
+Defeating a dungeon's boss descends you into the next one, 2 rooms larger
+(both min and max) than the one before, keeping your gear, level, and XP.
+This happens up to 7 dungeons deep; the 7th holds the Dungeon Emperor, a much
+tougher super boss guarding a golden crown. Defeat it and take the crown to
+win the game for good.
 
 ## Play in the browser (Docker)
 
@@ -21,11 +24,13 @@ docker compose up --build
 ```
 
 Then open http://localhost:8000 in a browser. Your first visit sets a
-`player_id` cookie and starts a new game; the server saves your progress to
-disk after every command and resumes the same game (with a recap of what
-happened in the current dungeon) whenever that browser reconnects, including
-after a server restart. The save is deleted once the game ends (winning or
-quitting), so your next visit starts a fresh run.
+`player_id` cookie, then asks which world to play in (each world is an
+independent, separately-saved dungeon) before dropping you into class and
+name selection for a new game there. The server saves your progress to disk
+after every command and resumes the same game (with a recap of what happened
+in the current dungeon) whenever that browser reconnects to that world,
+including after a server restart. The save is deleted once the game ends
+(winning or quitting), so your next visit to that world starts a fresh run.
 
 Without Compose:
 
@@ -79,9 +84,13 @@ Then open http://localhost:8000.
 - `go <direction>` / `n` / `s` / `e` / `w`: move
 - `look`: describe the current room
 - `take <item>`: pick up an item
-- `inventory` / `i`: show your inventory
+- `inventory` / `i`: show what you're carrying and wielding
+- `equip <item>`: wield an item from your inventory
+- `unequip <item>`: put a wielded item back in your inventory
 - `attack`: fight the monster in the room
 - `use <item>`: use an item (e.g. drink a potion)
+- `skills`: show the skills/spells you know
+- `cast <skill>`: cast a known skill or spell (once per round)
 - `map` / `m`: show a minimap of the rooms you've explored
 - `history`: show everything you've done this playthrough
 - `help`: list commands
@@ -91,4 +100,11 @@ Then open http://localhost:8000.
 
 ```bash
 pytest
+```
+
+Or, with the `dev` extras installed (`pip install -e ".[dev]"`), run lint and
+coverage together:
+
+```bash
+./scripts/check.sh
 ```
