@@ -53,6 +53,12 @@ These were part of the roadmap discussion but have already been built:
   win. Weapons bumped out of a slot on `equip` are flagged retired and
   collapse into a single "Old gear (N)" line instead of cluttering the list
   one entry per obsolete tier.
+- **Inventory/skills code split out of `game.py`.** `game.py` was mixing
+  dungeon orchestration with the actual state mutation for items, equipment,
+  and skills. That mechanics logic moved into `inventory.py` and `skills.py`,
+  following the same pure-function-plus-result-object pattern already used
+  by `combat.py`/`leveling.py`, so `game.py` now narrates outcomes instead of
+  also implementing them. No behavior change.
 
 ## Planned
 
