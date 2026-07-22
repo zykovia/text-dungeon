@@ -89,55 +89,38 @@ These were part of the roadmap discussion but have already been built:
   autotiling (one flat wall tile fills every non-room cell instead of
   directional wall pieces), and per-exact-item-name icons (a three-way
   heal/crown/generic-weapon rule stands in for all ~58 named items).
+- **Multiplayer shared dungeon.** Full write-up in `MULTIPLAYER-DESIGN.md`.
+  Dungeons are now persistent per level within a world, shared by everyone
+  who joins it: a level's rooms/monsters/items are generated once and never
+  regenerated, so death/respawn no longer rerolls the dungeon, and killing
+  a boss only advances the player who did it, not the whole world. Players
+  sharing a room mutate the same live objects (verified with a real
+  two-client run). Other players now show up on the 2D map in any room
+  within your own fog-of-war, not just your current room, and combat/item
+  events, arrivals, and departures broadcast to anyone who can see that
+  room — not only someone standing in it. Persistence reshaped to match:
+  the dungeon now lives in a per-world `world.json`, separate from each
+  player's own smaller save, and survives server restarts. This ships the
+  single-service version — multi-container routing (splitting a world
+  across separately deployed containers) isn't part of it, noted below.
 
 ## Planned
 
-### Multiplayer: shared dungeon
+### Persistent world across containers
 
-Let multiple players explore and fight in the same dungeon at the same time,
-rather than each player generating their own independent instance.
-
-### Persistent world per container
-
-Persist the dungeon itself (not just per-player progress) on the running
-container, so the world survives restarts and is shared by everyone
-connected to it. Once dungeons are actually split across separate
-containers, the existing single-service world-select screen also needs a
-routing layer in front of it, to send a player's connection to whichever
-container their chosen world actually lives on, rather than listing worlds
-that all happen to live in the one service as it does today.
-
-## Design note: multiplayer is one change, not two
-
-"Multiplayer" and "persistent world" are really the same architectural
-pivot. Today, `Game` owns exactly one player and one dungeon, generated and
-saved per player. The design pass this note used to call for is done — see
-`MULTIPLAYER-DESIGN.md` for the full write-up. Short version:
-
-- The dungeon becomes a `World` object independent of any single player,
-  holding every dungeon level's rooms persistently (generated once, never
-  discarded) so different players can be on different levels of the same
-  world at once.
-- Killing a boss only advances the player who did it to the next level;
-  it's not a whole-world event, which sidesteps needing a broadcast-driven
-  mass relocation.
-- Every connected player still needs to see the effects of others' actions
-  in their own room in real time (someone else fights the room's monster,
-  takes an item), which needs a broadcast layer, scoped per room rather
-  than per world.
-- Concurrent mutation of shared state (two players attacking the same
-  monster) turns out to need no explicit locking, as long as this stays a
-  single-process deployment — the reasoning is in the design doc.
-- Persistence reshapes: rooms move into a per-world save, separate from each
-  player's own (smaller) save. This is a real schema change and will need a
-  `SAVE_VERSION` bump when it ships, unlike the world-select work.
+The dungeon already persists across restarts of the one running service
+(`world.json`, shipped above). What's not built: splitting a world's
+dungeon across multiple separately-deployed containers, and the routing
+layer the existing single-service world-select screen would then need in
+front of it, to send a player's connection to whichever container their
+chosen world actually lives on.
 
 ## Other ideas raised alongside these
 
 Not yet committed to, but worth keeping in mind as the above lands:
 
-- Player presence/chat once multiplayer exists (e.g. "Aragorn entered the
-  room").
+- Narrated presence/chat (e.g. "Aragorn entered the room" as readable text,
+  not just a sprite appearing on the map, which already shipped above).
 - A leaderboard or hall of fame for completed runs.
 - 2D graphics polish: motion/animation, real autotiling, and per-item icons
   (Phase 5 and the deferred pieces of Phases 3-4 in `2D-GRAPHICS-PLAN.md`),
