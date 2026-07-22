@@ -1,7 +1,9 @@
 from text_dungeon.balance import MAX_DUNGEON_LEVEL
+from text_dungeon.character import create_player
 from text_dungeon.game import Game
 from text_dungeon.models import Item, Monster
 from text_dungeon.world import room_count_range
+from text_dungeon.world_state import World
 
 
 def test_move_between_rooms():
@@ -55,23 +57,37 @@ def test_respawn_keeps_inventory_level_and_xp():
     game.player.xp = 4
 
     game.player.hp = 0
-    game.respawn(seed=2)
+    game.respawn()
 
     assert any(item.name == "rusty sword" for item in game.player.inventory)
     assert game.player.level == 2
     assert game.player.xp == 4
 
 
-def test_respawn_resets_position_hp_and_exploration():
+def test_respawn_resets_position_and_hp_but_keeps_exploration():
     game = Game(seed=1)
-    game.move(next(iter(game.current_room().exits)))
+    direction, destination = next(iter(game.current_room().exits.items()))
+    game.move(direction)
     game.player.hp = 0
 
-    game.respawn(seed=2)
+    game.respawn()
 
     assert game.player.current_room == "entrance"
     assert game.player.hp == game.player.max_hp
-    assert game.player.visited == {"entrance"}
+    # The level persists across a respawn now, so fog-of-war isn't reset:
+    # both the destination visited before dying and the entrance (visited
+    # again on respawn's own look()) stay known.
+    assert game.player.visited == {"entrance", destination}
+
+
+def test_respawn_does_not_regenerate_the_level():
+    game = Game(seed=1)
+    rooms_before = game.rooms
+    game.player.hp = 0
+
+    game.respawn()
+
+    assert game.rooms is rooms_before
 
 
 def test_dying_and_respawning_keeps_game_running():
@@ -79,10 +95,89 @@ def test_dying_and_respawning_keeps_game_running():
     game.player.hp = 0
     assert not game.player.alive
 
-    game.respawn(seed=2)
+    game.respawn()
 
     assert game.running is True
     assert game.player.alive
+
+
+def test_two_games_sharing_a_world_see_the_same_room_state():
+    world = World()
+    game_a = Game(player=create_player("Warrior", name="A"), world=world)
+    game_b = Game(player=create_player("Ranger", name="B"), world=world)
+
+    assert game_a.rooms is game_b.rooms
+
+    room_id = next(iter(game_a.rooms))
+    game_a.rooms[room_id].monster = Monster("shared monster", hp=10, attack=1)
+    game_a.player.current_room = room_id
+    game_b.player.current_room = room_id
+
+    game_a.attack()
+
+    assert game_b.current_room().monster.hp < 10
+    assert game_b.current_room().monster is game_a.current_room().monster
+
+
+def test_new_player_creation_without_a_world_gets_a_private_world():
+    game_a = Game(seed=1, player_class="Warrior")
+    game_b = Game(seed=1, player_class="Warrior")
+
+    assert game_a.world is not game_b.world
+    assert game_a.rooms is not game_b.rooms
+
+
+def test_last_broadcast_is_set_on_a_successful_attack_and_cleared_next_turn():
+    game = Game(seed=1)
+    room = game.current_room()
+    room.monster = Monster("target", hp=100, attack=1)
+
+    game.handle_command("attack")
+
+    assert game.last_broadcast is not None
+    level, room_id, message = game.last_broadcast
+    assert level == game.player.dungeon_level
+    assert room_id == room.id
+    assert "attacks" in message
+
+    game.handle_command("look")
+    assert game.last_broadcast is None
+
+
+def test_last_broadcast_is_set_when_a_monster_is_defeated():
+    game = Game(seed=1)
+    room = game.current_room()
+    room.monster = Monster("target", hp=1, attack=1)
+
+    game.handle_command("attack")
+
+    assert game.last_broadcast is not None
+    assert "defeated" in game.last_broadcast[2]
+
+
+def test_last_broadcast_is_set_on_a_successful_take():
+    game = Game(seed=1)
+    room = game.current_room()
+    room.items.append(Item("test item", "A thing.", damage_bonus=1))
+
+    game.handle_command("take test item")
+
+    assert game.last_broadcast is not None
+    level, room_id, message = game.last_broadcast
+    assert room_id == room.id
+    assert "takes" in message
+
+
+def test_resuming_with_a_room_missing_from_the_world_self_heals_to_entrance():
+    world = World()
+    player = create_player("Warrior")
+    player.current_room = "room_99"
+    player.visited = {"room_99"}
+
+    game = Game(player=player, world=world)
+
+    assert game.player.current_room == "entrance"
+    assert game.player.visited == set()
 
 
 def test_taking_the_crown_advances_to_a_new_larger_dungeon():

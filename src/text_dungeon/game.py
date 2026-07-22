@@ -10,7 +10,8 @@ from .minimap import compute_coords, room_snapshots
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
 from .templates import BOSS, MAX_ITEM_TIER, SUPER_BOSS, WIN_ITEM_NAME, skill_template_for
-from .world import generate_dungeon, is_final_dungeon, room_count_range
+from .world import is_final_dungeon
+from .world_state import World
 
 
 class Game:
@@ -19,57 +20,68 @@ class Game:
         seed: int | None = None,
         *,
         player: Player | None = None,
-        rooms: dict[str, Room] | None = None,
+        world: World | None = None,
         running: bool = True,
         player_class: str | None = None,
         player_name: str | None = None,
     ) -> None:
-        """Start a fresh dungeon, or, if `player`/`rooms` are given, resume a saved one."""
+        """Start a fresh dungeon, or, if `player` is given, resume a saved one.
+
+        `world` is the shared dungeon state to draw rooms from; left unset, a
+        private, unshared World is created (solo play, and every existing
+        test that doesn't care about multiplayer).
+        """
         self.player = player or create_player(player_class or DEFAULT_PLAYER_CLASS, name=player_name)
-        if rooms is not None:
-            self.rooms = rooms
-            self.coords = compute_coords(self.rooms)
-        else:
-            self._enter_new_dungeon(seed)
+        self.world = world if world is not None else World()
+        self._load_current_level(seed)
         self.running = running
         self.output: list[str] = []
+        self.last_broadcast: tuple[int, str, str] | None = None
 
-    def _enter_new_dungeon(self, seed: int | None) -> None:
-        min_rooms, max_rooms = room_count_range(self.player.dungeon_level)
-        final_boss = is_final_dungeon(self.player.dungeon_level)
+    def _load_current_level(self, seed: int | None = None) -> None:
+        """Point self.rooms/coords at the player's current level in the shared world.
+
+        Side-effect-free on purpose: this runs on every construction,
+        including a plain reconnect to an already-in-progress level, so it
+        must not re-mark history or re-toggle upgrade bookkeeping (see
+        advance(), which does those explicitly for a real level transition).
+        """
         upgrade_slot = self.player.next_upgrade_slot
         equipped = getattr(self.player, upgrade_slot)
         upgrade_tier = min((equipped.tier if equipped else 0) + 1, MAX_ITEM_TIER)
-        self.rooms = generate_dungeon(
-            seed=seed,
-            min_rooms=min_rooms,
-            max_rooms=max_rooms,
-            final_boss=final_boss,
+        self.rooms = self.world.level_rooms(
+            self.player.dungeon_level,
             player_class=self.player.player_class,
             upgrade_slot=upgrade_slot,
             upgrade_tier=upgrade_tier,
+            seed=seed,
         )
         self.coords = compute_coords(self.rooms)
-        self.player.next_upgrade_slot = "off_hand" if upgrade_slot == "main_hand" else "main_hand"
-        history.start_new_dungeon(self.player)
+        if self.player.current_room not in self.rooms:
+            # Self-heal a save whose room no longer exists in the loaded
+            # world (e.g. the world state was lost/rolled back after this
+            # room was already visited) instead of crashing on first look().
+            self.player.current_room = "entrance"
+            self.player.visited = set()
 
-    def _relocate_to_entrance(self) -> None:
+    def respawn(self) -> None:
+        """Return to the entrance of the current (persistent) level after death."""
         self.player.current_room = "entrance"
         self.player.hp = self.player.max_hp
-        self.player.visited = set()
-
-    def respawn(self, seed: int | None = None) -> None:
-        """Start a new dungeon of the same size after death, keeping inventory, level, and XP."""
-        self._enter_new_dungeon(seed)
-        self._relocate_to_entrance()
-        self.emit("You awaken at the entrance of a new dungeon, your gear and experience intact.")
+        self.emit("You awaken at the entrance, patched up and ready to continue.")
         self.look()
 
     def advance(self, seed: int | None = None) -> None:
-        """Descend into a new, larger dungeon after defeating the boss."""
+        """Descend into the next level after defeating its boss."""
         self.player.dungeon_level += 1
-        self._enter_new_dungeon(seed)
-        self._relocate_to_entrance()
+        self.player.current_room = "entrance"
+        self.player.hp = self.player.max_hp
+        self.player.visited = set()
+        self._load_current_level(seed)
+        history.start_new_dungeon(self.player)
+        self.player.next_upgrade_slot = (
+            "off_hand" if self.player.next_upgrade_slot == "main_hand" else "main_hand"
+        )
         self.emit(
             f"A new dungeon awaits below, larger than the last (depth {self.player.dungeon_level})."
         )
@@ -114,6 +126,7 @@ class Game:
         )
 
     def handle_command(self, command: str) -> None:
+        self.last_broadcast = None
         dispatch_command(self, command)
 
     def current_room(self) -> Room:
@@ -154,7 +167,8 @@ class Game:
         self.look()
 
     def take(self, item_name: str) -> None:
-        result = inventory.take_item(self.player, self.current_room(), item_name)
+        room = self.current_room()
+        result = inventory.take_item(self.player, room, item_name)
         if result.item is None:
             self.emit(f"There's no '{item_name}' here.")
             return
@@ -162,6 +176,9 @@ class Game:
             self.emit(f"Only a {result.item.player_class} can wield the {result.item.name}.")
             return
         self.emit(f"You take the {inventory.item_label(result.item)}.")
+        self.last_broadcast = (
+            self.player.dungeon_level, room.id, f"{self.player.name} takes the {result.item.name}."
+        )
         if result.item.name == WIN_ITEM_NAME:
             self.emit("")
             self.emit(
@@ -225,6 +242,11 @@ class Game:
 
         if result.monster_defeated:
             self.emit(f"You have defeated the {monster.name}!")
+            self.last_broadcast = (
+                self.player.dungeon_level,
+                room.id,
+                f"{self.player.name} has defeated the {monster.name}!",
+            )
             xp_gained = xp_for_kill(monster.name, BOSS.monster_name, SUPER_BOSS.monster_name)
             level_ups = gain_xp(self.player, xp_gained)
             self.emit(f"You gain {xp_gained} experience. ({self.player.xp} XP)")
@@ -239,6 +261,9 @@ class Game:
                 self.advance()
             return
 
+        self.last_broadcast = (
+            self.player.dungeon_level, room.id, f"{self.player.name} attacks the {monster.name}."
+        )
         self.emit(
             f"The {monster.name} hits you for {result.incoming_damage} damage. "
             f"({self.player.hp}/{self.player.max_hp} HP)"

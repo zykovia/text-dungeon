@@ -6,14 +6,14 @@ import os
 from pathlib import Path
 
 from .balance import MAX_DUNGEON_LEVEL
-from .game import Game
 from .models import Item, Monster, Player, Room
+from .world_state import World
 
 # Bump this whenever a save produced by an older version of the game could crash
 # or misbehave on load (e.g. a Player/Room field is added, renamed, or removed,
 # or dungeon generation changes in a way old saves shouldn't carry forward).
 # Saves tagged with a different version are discarded instead of being loaded.
-SAVE_VERSION = 7
+SAVE_VERSION = 8
 
 
 def default_save_dir() -> Path:
@@ -21,8 +21,12 @@ def default_save_dir() -> Path:
     return Path(configured) if configured else Path.home() / ".text_dungeon" / "saves"
 
 
-def _save_path(world_id: str, player_id: str, save_dir: Path | None) -> Path:
-    return (save_dir or default_save_dir()) / world_id / f"{player_id}.json"
+def _world_path(world_id: str, save_dir: Path | None) -> Path:
+    return (save_dir or default_save_dir()) / world_id / "world.json"
+
+
+def _player_path(world_id: str, player_id: str, save_dir: Path | None) -> Path:
+    return (save_dir or default_save_dir()) / world_id / "players" / f"{player_id}.json"
 
 
 def _read_state(path: Path) -> dict | None:
@@ -34,20 +38,69 @@ def _read_state(path: Path) -> dict | None:
         return None
 
 
-def _state_from_game(game: Game) -> dict:
-    return {
+def _rooms_from_state(rooms_data: dict) -> dict[str, Room]:
+    rooms = {}
+    for room_id, room_data in rooms_data.items():
+        room_data = dict(room_data)
+        room_data["items"] = [Item(**item) for item in room_data["items"]]
+        room_data["monster"] = (
+            Monster(**room_data["monster"]) if room_data["monster"] is not None else None
+        )
+        rooms[room_id] = Room(**room_data)
+    return rooms
+
+
+def save_world(world_id: str, world: World, save_dir: Path | None = None) -> None:
+    path = _world_path(world_id, save_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    state = {
         "version": SAVE_VERSION,
-        "player": dataclasses.asdict(game.player)
-        | {
-            "visited": sorted(game.player.visited),
-            "used_skills_this_round": sorted(game.player.used_skills_this_round),
+        "levels": {
+            str(level): {room_id: dataclasses.asdict(room) for room_id, room in rooms.items()}
+            for level, rooms in world.levels.items()
         },
-        "rooms": {room_id: dataclasses.asdict(room) for room_id, room in game.rooms.items()},
-        "running": game.running,
     }
+    path.write_text(json.dumps(state))
 
 
-def _game_from_state(state: dict) -> Game:
+def load_world(world_id: str, save_dir: Path | None = None) -> World | None:
+    path = _world_path(world_id, save_dir)
+    state = _read_state(path)
+    if state is None or state.get("version") != SAVE_VERSION:
+        path.unlink(missing_ok=True)
+        return None
+    levels = {
+        int(level_str): _rooms_from_state(rooms_data)
+        for level_str, rooms_data in state["levels"].items()
+    }
+    return World(levels=levels)
+
+
+def save_player(
+    world_id: str, player_id: str, player: Player, running: bool, save_dir: Path | None = None
+) -> None:
+    path = _player_path(world_id, player_id, save_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    state = {
+        "version": SAVE_VERSION,
+        "player": dataclasses.asdict(player)
+        | {
+            "visited": sorted(player.visited),
+            "used_skills_this_round": sorted(player.used_skills_this_round),
+        },
+        "running": running,
+    }
+    path.write_text(json.dumps(state))
+
+
+def load_player(
+    world_id: str, player_id: str, save_dir: Path | None = None
+) -> tuple[Player, bool] | None:
+    path = _player_path(world_id, player_id, save_dir)
+    state = _read_state(path)
+    if state is None or state.get("version") != SAVE_VERSION:
+        path.unlink(missing_ok=True)
+        return None
     player_data = dict(state["player"])
     player_data["inventory"] = [Item(**item) for item in player_data["inventory"]]
     player_data["main_hand"] = (
@@ -58,42 +111,16 @@ def _game_from_state(state: dict) -> Game:
     )
     player_data["visited"] = set(player_data["visited"])
     player_data["used_skills_this_round"] = set(player_data["used_skills_this_round"])
-    player = Player(**player_data)
-
-    rooms = {}
-    for room_id, room_data in state["rooms"].items():
-        room_data = dict(room_data)
-        room_data["items"] = [Item(**item) for item in room_data["items"]]
-        room_data["monster"] = (
-            Monster(**room_data["monster"]) if room_data["monster"] is not None else None
-        )
-        rooms[room_id] = Room(**room_data)
-
-    return Game(player=player, rooms=rooms, running=state["running"])
-
-
-def save_game(world_id: str, player_id: str, game: Game, save_dir: Path | None = None) -> None:
-    path = _save_path(world_id, player_id, save_dir)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(_state_from_game(game)))
-
-
-def load_game(world_id: str, player_id: str, save_dir: Path | None = None) -> Game | None:
-    path = _save_path(world_id, player_id, save_dir)
-    state = _read_state(path)
-    if state is None or state.get("version") != SAVE_VERSION:
-        path.unlink(missing_ok=True)
-        return None
-    return _game_from_state(state)
+    return Player(**player_data), state["running"]
 
 
 def load_summary(world_id: str, player_id: str, save_dir: Path | None = None) -> dict | None:
     """A lightweight, read-only peek at a save for the world-select screen.
 
-    Never deletes an incompatible save (unlike load_game): this runs for every
+    Never deletes an incompatible save (unlike load_player): this runs for every
     world just to render the select list, before the player has chosen one.
     """
-    state = _read_state(_save_path(world_id, player_id, save_dir))
+    state = _read_state(_player_path(world_id, player_id, save_dir))
     if state is None or state.get("version") != SAVE_VERSION:
         return None
     try:
@@ -119,4 +146,5 @@ def load_summary(world_id: str, player_id: str, save_dir: Path | None = None) ->
 
 
 def delete_save(world_id: str, player_id: str, save_dir: Path | None = None) -> None:
-    _save_path(world_id, player_id, save_dir).unlink(missing_ok=True)
+    """Delete only this player's save. world.json survives - others may still use it."""
+    _player_path(world_id, player_id, save_dir).unlink(missing_ok=True)
