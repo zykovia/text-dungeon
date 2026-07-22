@@ -1,7 +1,12 @@
 from text_dungeon.character import create_player
 from text_dungeon.game import Game
 from text_dungeon.models import Room
-from text_dungeon.web.server import _accumulate, _player_ids_who_know_room, _status_with_players
+from text_dungeon.web.server import (
+    _mark_pending,
+    _player_ids_in_room,
+    _player_ids_who_know_room,
+    _status_with_players,
+)
 from text_dungeon.world_state import World
 
 
@@ -31,6 +36,38 @@ def _game_at(world, dungeon_level, room_id, name="P", player_class="Warrior"):
     if dungeon_level == 1:
         game.look()  # re-populate visited for the actual target room too
     return game
+
+
+def test_player_ids_in_room_matches_only_the_literal_same_room():
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    same_room = _game_at(world, 1, "entrance", name="SameRoom")
+    neighbor_viewer = _game_at(world, 1, "entrance", name="Neighbor")
+    neighbor_viewer.player.current_room = "hallway"  # a neighbor of entrance, not entrance itself
+    sessions = {
+        "acting": (None, acting),
+        "same-room": (None, same_room),
+        "neighbor": (None, neighbor_viewer),
+    }
+
+    matches = _player_ids_in_room(sessions, 1, "entrance", exclude_player_id="acting")
+
+    assert matches == ["same-room"]
+
+
+def test_player_ids_in_room_is_stricter_than_who_know_room_for_the_same_scenario():
+    """The two audience rules genuinely differ: a visible neighbor counts for
+    fog-of-war (used for combat/presence) but not for literal same-room (chat)."""
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    neighbor_viewer = _game_at(world, 1, "entrance", name="Neighbor")  # sees hallway too
+
+    sessions = {"acting": (None, acting), "neighbor": (None, neighbor_viewer)}
+
+    assert _player_ids_who_know_room(sessions, 1, "hallway", exclude_player_id="acting") == [
+        "neighbor"
+    ]
+    assert _player_ids_in_room(sessions, 1, "hallway", exclude_player_id="acting") == []
 
 
 def test_player_ids_who_know_room_matches_same_room():
@@ -132,26 +169,30 @@ def test_status_with_players_excludes_the_requested_player_from_their_own_room()
     assert status["rooms"]["entrance"]["players"] == []
 
 
-def test_accumulate_merges_multiple_calls_for_the_same_recipient():
+def test_status_with_players_does_not_list_a_fog_of_war_only_neighbor():
+    """A player who merely knows about (but isn't in) a room shouldn't be
+    listed as "present" there - _status_with_players uses the strict rule."""
     world = _chain_world()
-    acting = _game_at(world, 1, "entrance", name="Acting")
     viewer = _game_at(world, 1, "entrance", name="Viewer")
-    sessions = {"acting": (None, acting), "viewer": (None, viewer)}
+    neighbor = _game_at(world, 1, "entrance", name="Neighbor")
+    neighbor.player.current_room = "hallway"
+    sessions = {"viewer": (None, viewer), "neighbor": (None, neighbor)}
 
+    status = _status_with_players(viewer, sessions, exclude_player_id="viewer")
+
+    assert status["rooms"]["entrance"]["players"] == []
+
+
+def test_mark_pending_merges_multiple_calls_for_the_same_recipient():
     pending: dict[str, list[str]] = {}
-    _accumulate(pending, sessions, 1, "entrance", exclude_player_id="acting", message="First thing.")
-    _accumulate(pending, sessions, 1, "entrance", exclude_player_id="acting")  # silent presence event
+    _mark_pending(pending, ["viewer"], message="First thing.")
+    _mark_pending(pending, ["viewer"])  # silent presence event
 
     assert pending == {"viewer": ["First thing."]}
 
 
-def test_accumulate_adds_a_recipient_with_no_message_for_a_silent_event():
-    world = _chain_world()
-    acting = _game_at(world, 1, "entrance", name="Acting")
-    viewer = _game_at(world, 1, "entrance", name="Viewer")
-    sessions = {"acting": (None, acting), "viewer": (None, viewer)}
-
+def test_mark_pending_adds_a_recipient_with_no_message_for_a_silent_event():
     pending: dict[str, list[str]] = {}
-    _accumulate(pending, sessions, 1, "entrance", exclude_player_id="acting")
+    _mark_pending(pending, ["viewer"])
 
     assert pending == {"viewer": []}

@@ -34,12 +34,33 @@ def _get_world(world_id: str) -> World:
     return worlds[world_id]
 
 
+def _player_ids_in_room(
+    sessions: dict[str, tuple[WebSocket, Game]],
+    dungeon_level: int,
+    room_id: str,
+    exclude_player_id: str,
+) -> list[str]:
+    """Who's literally standing in this exact room right now.
+
+    Stricter than _player_ids_who_know_room: used for chat, where "you can
+    see this room on your map" shouldn't mean "you can overhear it."
+    """
+    return [
+        player_id
+        for player_id, (_, other_game) in sessions.items()
+        if player_id != exclude_player_id
+        and other_game.player.dungeon_level == dungeon_level
+        and other_game.player.current_room == room_id
+    ]
+
+
 def _player_ids_who_know_room(
     sessions: dict[str, tuple[WebSocket, Game]],
     dungeon_level: int,
     room_id: str,
     exclude_player_id: str,
 ) -> list[str]:
+    """Anyone whose own fog-of-war reveals this room, used for combat/presence."""
     return [
         player_id
         for player_id, (_, other_game) in sessions.items()
@@ -58,25 +79,21 @@ def _status_with_players(
     """
     status = game.status()
     for room_id, room in status["rooms"].items():
+        present = _player_ids_in_room(sessions, game.player.dungeon_level, room_id, exclude_player_id)
         room["players"] = [
-            {"name": other_game.player.name, "player_class": other_game.player.player_class}
-            for player_id, (_, other_game) in sessions.items()
-            if player_id != exclude_player_id
-            and other_game.player.dungeon_level == game.player.dungeon_level
-            and other_game.player.current_room == room_id
+            {
+                "name": sessions[pid][1].player.name,
+                "player_class": sessions[pid][1].player.player_class,
+            }
+            for pid in present
         ]
     return status
 
 
-def _accumulate(
-    pending: dict[str, list[str]],
-    sessions: dict[str, tuple[WebSocket, Game]],
-    dungeon_level: int,
-    room_id: str,
-    exclude_player_id: str,
-    message: str | None = None,
+def _mark_pending(
+    pending: dict[str, list[str]], player_ids: list[str], message: str | None = None
 ) -> None:
-    for player_id in _player_ids_who_know_room(sessions, dungeon_level, room_id, exclude_player_id):
+    for player_id in player_ids:
         lines = pending.setdefault(player_id, [])
         if message:
             lines.append(message)
@@ -211,13 +228,17 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
 
         # Arrival: let anyone who can already see this room know we're here.
         arrival_pending: dict[str, list[str]] = {}
-        _accumulate(
-            arrival_pending, sessions, game.player.dungeon_level, game.player.current_room, player_id
+        _mark_pending(
+            arrival_pending,
+            _player_ids_who_know_room(
+                sessions, game.player.dungeon_level, game.player.current_room, player_id
+            ),
+            f"{game.player.name} enters the room.",
         )
         await _flush(sessions, arrival_pending)
 
         while True:
-            command = (await websocket.receive_text()).strip().lower()
+            command = (await websocket.receive_text()).strip()
             if command:
                 before = (game.player.dungeon_level, game.player.current_room)
                 game.handle_command(command)
@@ -231,12 +252,28 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
                 if game.last_broadcast:
                     level, room_id, message = game.last_broadcast
                     game.last_broadcast = None
-                    _accumulate(pending, sessions, level, room_id, player_id, message)
+                    _mark_pending(
+                        pending, _player_ids_who_know_room(sessions, level, room_id, player_id), message
+                    )
+                if game.last_chat:
+                    level, room_id, message = game.last_chat
+                    game.last_chat = None
+                    _mark_pending(
+                        pending, _player_ids_in_room(sessions, level, room_id, player_id), message
+                    )
                 if before != after:
                     before_level, before_room = before
                     after_level, after_room = after
-                    _accumulate(pending, sessions, before_level, before_room, player_id)
-                    _accumulate(pending, sessions, after_level, after_room, player_id)
+                    _mark_pending(
+                        pending,
+                        _player_ids_who_know_room(sessions, before_level, before_room, player_id),
+                        f"{game.player.name} leaves the room.",
+                    )
+                    _mark_pending(
+                        pending,
+                        _player_ids_who_know_room(sessions, after_level, after_room, player_id),
+                        f"{game.player.name} enters the room.",
+                    )
                 await _flush(sessions, pending)
 
             game_over = not game.running
@@ -260,12 +297,12 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
         # see us know we're gone.
         sessions.pop(player_id, None)
         departure_pending: dict[str, list[str]] = {}
-        _accumulate(
+        _mark_pending(
             departure_pending,
-            sessions,
-            game.player.dungeon_level,
-            game.player.current_room,
-            player_id,
+            _player_ids_who_know_room(
+                sessions, game.player.dungeon_level, game.player.current_room, player_id
+            ),
+            f"{game.player.name} leaves the room.",
         )
         await _flush(sessions, departure_pending)
 

@@ -37,6 +37,7 @@ class Game:
         self.running = running
         self.output: list[str] = []
         self.last_broadcast: tuple[int, str, str] | None = None
+        self.last_chat: tuple[int, str, str] | None = None
 
     def _load_current_level(self, seed: int | None = None) -> None:
         """Point self.rooms/coords at the player's current level in the shared world.
@@ -104,7 +105,7 @@ class Game:
         self._flush()
         while self.running:
             try:
-                command = input("\n> ").strip().lower()
+                command = input("\n> ").strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nYou flee the dungeon.")
                 return
@@ -127,6 +128,7 @@ class Game:
 
     def handle_command(self, command: str) -> None:
         self.last_broadcast = None
+        self.last_chat = None
         dispatch_command(self, command)
 
     def current_room(self) -> Room:
@@ -292,6 +294,17 @@ class Game:
             f"You use the {result.item.name} and recover {result.healed} HP. "
             f"({self.player.hp}/{self.player.max_hp} HP)"
         )
+
+    def say(self, message: str) -> None:
+        if not message:
+            self.emit("Say what?")
+            return
+        if len(message) > 200:
+            self.emit("That's too long to say. Try something shorter.")
+            return
+        room = self.current_room()
+        self.emit(f"You say: {message}")
+        self.last_chat = (self.player.dungeon_level, room.id, f"{self.player.name} says: {message}")
 
     def show_skills(self) -> None:
         if not self.player.skills:

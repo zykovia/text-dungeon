@@ -19,6 +19,7 @@ Commands:
   use <item>       use an item from your inventory
   skills           show the skills/spells you know
   cast <skill>     cast a known skill or spell (once per round)
+  say <message>    talk to others in the room
   map (m)          show a map of rooms you've explored
   history          show everything you've done this playthrough
   help             show this message
@@ -27,6 +28,7 @@ Commands:
 
 
 def _cmd_go(game: Game, arg: str) -> None:
+    arg = arg.lower()
     if not arg:
         game.emit("Go where?")
         return
@@ -38,6 +40,7 @@ def _cmd_look(game: Game, arg: str) -> None:
 
 
 def _cmd_take(game: Game, arg: str) -> None:
+    arg = arg.lower()
     if not arg:
         game.emit("Take what?")
         return
@@ -53,6 +56,7 @@ def _cmd_attack(game: Game, arg: str) -> None:
 
 
 def _cmd_use(game: Game, arg: str) -> None:
+    arg = arg.lower()
     if not arg:
         game.emit("Use what?")
         return
@@ -60,6 +64,7 @@ def _cmd_use(game: Game, arg: str) -> None:
 
 
 def _cmd_equip(game: Game, arg: str) -> None:
+    arg = arg.lower()
     if not arg:
         game.emit("Equip what?")
         return
@@ -67,6 +72,7 @@ def _cmd_equip(game: Game, arg: str) -> None:
 
 
 def _cmd_unequip(game: Game, arg: str) -> None:
+    arg = arg.lower()
     if not arg:
         game.emit("Unequip what?")
         return
@@ -78,10 +84,15 @@ def _cmd_skills(game: Game, arg: str) -> None:
 
 
 def _cmd_cast(game: Game, arg: str) -> None:
+    arg = arg.lower()
     if not arg:
         game.emit("Cast what?")
         return
     game.cast(arg)
+
+
+def _cmd_say(game: Game, arg: str) -> None:
+    game.say(arg)
 
 
 def _cmd_help(game: Game, arg: str) -> None:
@@ -115,6 +126,7 @@ COMMANDS: dict[str, Callable[[Game, str], None]] = {
     "unequip": _cmd_unequip,
     "skills": _cmd_skills,
     "cast": _cmd_cast,
+    "say": _cmd_say,
     "help": _cmd_help,
     "quit": _cmd_quit,
     "map": _cmd_map,
@@ -125,6 +137,7 @@ COMMANDS: dict[str, Callable[[Game, str], None]] = {
 
 def handle_command(game: Game, command: str) -> None:
     verb, _, arg = command.partition(" ")
+    verb = verb.lower()
     arg = arg.strip()
 
     if verb in DIRECTION_SHORTHAND:

@@ -204,6 +204,77 @@ def test_last_broadcast_is_set_on_a_successful_take():
     assert "takes" in message
 
 
+def test_say_emits_for_the_sender_and_sets_last_chat():
+    game = Game(seed=1)
+    room = game.current_room()
+
+    game.handle_command("say hello there")
+
+    assert "You say: hello there" in game.output
+    assert game.last_chat is not None
+    level, room_id, message = game.last_chat
+    assert level == game.player.dungeon_level
+    assert room_id == room.id
+    assert message == f"{game.player.name} says: hello there"
+
+
+def test_say_preserves_message_casing():
+    game = Game(seed=1)
+
+    game.handle_command("say Hello There")
+
+    assert "You say: Hello There" in game.output
+    assert game.last_chat[2] == f"{game.player.name} says: Hello There"
+
+
+def test_say_rejects_an_empty_message():
+    game = Game(seed=1)
+
+    game.say("")
+
+    assert "Say what?" in game.output
+    assert game.last_chat is None
+
+
+def test_say_rejects_an_overly_long_message():
+    game = Game(seed=1)
+
+    game.say("x" * 201)
+
+    assert game.last_chat is None
+    assert any("too long" in line for line in game.output)
+
+
+def test_last_chat_resets_at_the_start_of_the_next_command():
+    game = Game(seed=1)
+    game.handle_command("say hello")
+    assert game.last_chat is not None
+
+    game.handle_command("look")
+
+    assert game.last_chat is None
+
+
+def test_commands_still_match_case_insensitively_after_the_casing_refactor():
+    game = Game(seed=1, player_class="Warrior")
+    room = game.current_room()
+    room.items.append(Item("test item", "A thing.", damage_bonus=1, slot="main_hand"))
+
+    game.handle_command("TAKE test item")
+    assert any(item.name == "test item" for item in game.player.inventory)
+
+    game.handle_command("EQUIP test item")
+    assert game.player.main_hand.name == "test item"
+
+    game.handle_command("UNEQUIP test item")
+    assert game.player.main_hand is None
+
+    direction, _ = next(iter(room.exits.items()))
+    shorthand = direction[0].upper()  # e.g. "N" for "north"
+    game.handle_command(shorthand)
+    assert game.player.current_room != room.id
+
+
 def test_resuming_with_a_room_missing_from_the_world_self_heals_to_entrance():
     world = World()
     player = create_player("Warrior")
