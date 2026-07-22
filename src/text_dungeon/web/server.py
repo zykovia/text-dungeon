@@ -34,7 +34,7 @@ def _get_world(world_id: str) -> World:
     return worlds[world_id]
 
 
-def _player_ids_in_room(
+def _player_ids_who_know_room(
     sessions: dict[str, tuple[WebSocket, Game]],
     dungeon_level: int,
     room_id: str,
@@ -43,10 +43,62 @@ def _player_ids_in_room(
     return [
         player_id
         for player_id, (_, other_game) in sessions.items()
-        if player_id != exclude_player_id
-        and other_game.player.dungeon_level == dungeon_level
-        and other_game.player.current_room == room_id
+        if player_id != exclude_player_id and other_game.knows_room(dungeon_level, room_id)
     ]
+
+
+def _status_with_players(
+    game: Game, sessions: dict[str, tuple[WebSocket, Game]], exclude_player_id: str
+) -> dict:
+    """game.status(), with each room's "players" list of who else is standing there.
+
+    exclude_player_id must be whoever this status is *for* (so they don't see
+    themselves in their own room's list), not the player who triggered
+    whatever event caused this status to be sent.
+    """
+    status = game.status()
+    for room_id, room in status["rooms"].items():
+        room["players"] = [
+            {"name": other_game.player.name, "player_class": other_game.player.player_class}
+            for player_id, (_, other_game) in sessions.items()
+            if player_id != exclude_player_id
+            and other_game.player.dungeon_level == game.player.dungeon_level
+            and other_game.player.current_room == room_id
+        ]
+    return status
+
+
+def _accumulate(
+    pending: dict[str, list[str]],
+    sessions: dict[str, tuple[WebSocket, Game]],
+    dungeon_level: int,
+    room_id: str,
+    exclude_player_id: str,
+    message: str | None = None,
+) -> None:
+    for player_id in _player_ids_who_know_room(sessions, dungeon_level, room_id, exclude_player_id):
+        lines = pending.setdefault(player_id, [])
+        if message:
+            lines.append(message)
+
+
+async def _flush(sessions: dict[str, tuple[WebSocket, Game]], pending: dict[str, list[str]]) -> None:
+    for player_id, lines in pending.items():
+        if player_id not in sessions:
+            continue
+        other_ws, other_game = sessions[player_id]
+        try:
+            await other_ws.send_json(
+                {
+                    "lines": lines,
+                    "status": _status_with_players(other_game, sessions, player_id),
+                    "game_over": False,
+                }
+            )
+        except Exception:
+            # Best-effort: a recipient whose own connection is already
+            # dropping shouldn't prevent delivering to everyone else.
+            pass
 
 
 @app.get("/")
@@ -143,36 +195,57 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
     game = await _resume_or_start(websocket, world_id, player_id, world)
     player_id = player_id or str(uuid.uuid4())
 
-    world_sessions.setdefault(world_id, {})[player_id] = (websocket, game)
+    sessions = world_sessions.setdefault(world_id, {})
+    sessions[player_id] = (websocket, game)
 
     try:
         await websocket.send_json(
-            {"lines": game.pop_output(), "status": game.status(), "game_over": False}
+            {
+                "lines": game.pop_output(),
+                "status": _status_with_players(game, sessions, player_id),
+                "game_over": False,
+            }
         )
         save_world(world_id, world)
         save_player(world_id, player_id, game.player, game.running)
 
+        # Arrival: let anyone who can already see this room know we're here.
+        arrival_pending: dict[str, list[str]] = {}
+        _accumulate(
+            arrival_pending, sessions, game.player.dungeon_level, game.player.current_room, player_id
+        )
+        await _flush(sessions, arrival_pending)
+
         while True:
             command = (await websocket.receive_text()).strip().lower()
             if command:
+                before = (game.player.dungeon_level, game.player.current_room)
                 game.handle_command(command)
                 if not game.player.alive:
                     game.emit("")
                     game.emit("You have died.")
                     game.respawn()
+                after = (game.player.dungeon_level, game.player.current_room)
+
+                pending: dict[str, list[str]] = {}
                 if game.last_broadcast:
                     level, room_id, message = game.last_broadcast
                     game.last_broadcast = None
-                    sessions = world_sessions.get(world_id, {})
-                    for other_id in _player_ids_in_room(sessions, level, room_id, player_id):
-                        other_ws, other_game = sessions[other_id]
-                        await other_ws.send_json(
-                            {"lines": [message], "status": other_game.status(), "game_over": False}
-                        )
+                    _accumulate(pending, sessions, level, room_id, player_id, message)
+                if before != after:
+                    before_level, before_room = before
+                    after_level, after_room = after
+                    _accumulate(pending, sessions, before_level, before_room, player_id)
+                    _accumulate(pending, sessions, after_level, after_room, player_id)
+                await _flush(sessions, pending)
 
             game_over = not game.running
             await websocket.send_json(
-                {"lines": game.pop_output(), "status": game.status(), "game_over": game_over}
+                {
+                    "lines": game.pop_output(),
+                    "status": _status_with_players(game, sessions, player_id),
+                    "game_over": game_over,
+                }
             )
             if game_over:
                 delete_save(world_id, player_id)
@@ -182,7 +255,19 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
     except WebSocketDisconnect:
         pass
     finally:
-        world_sessions.get(world_id, {}).pop(player_id, None)
+        # Departure: remove our own session *first*, so the statuses built
+        # for everyone else no longer include us, then let anyone who could
+        # see us know we're gone.
+        sessions.pop(player_id, None)
+        departure_pending: dict[str, list[str]] = {}
+        _accumulate(
+            departure_pending,
+            sessions,
+            game.player.dungeon_level,
+            game.player.current_room,
+            player_id,
+        )
+        await _flush(sessions, departure_pending)
 
 
 def main() -> None:

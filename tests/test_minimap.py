@@ -1,4 +1,4 @@
-from text_dungeon.minimap import compute_coords, render_map, room_snapshots
+from text_dungeon.minimap import compute_coords, known_room_ids, render_map, room_snapshots
 from text_dungeon.models import Item, Monster, Room
 
 
@@ -48,6 +48,15 @@ def test_render_map_marks_current_room_and_fog_of_war():
     assert "[@]" in joined
     assert "[?]" in joined
     assert "[#]" not in joined
+
+
+def test_known_room_ids_is_visited_plus_immediate_neighbors():
+    rooms = _chain_rooms()
+
+    known = known_room_ids(rooms, visited={"entrance"})
+
+    assert known == {"entrance", "hallway"}
+    assert "vault" not in known
 
 
 def test_room_snapshots_scoped_to_visited_and_their_neighbors():

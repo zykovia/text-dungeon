@@ -27,7 +27,7 @@ def compute_coords(rooms: dict[str, Room], start: str = "entrance") -> dict[str,
     return coords
 
 
-def _known_room_ids(rooms: dict[str, Room], visited: set[str]) -> set[str]:
+def known_room_ids(rooms: dict[str, Room], visited: set[str]) -> set[str]:
     """Every room the player has been in, plus its immediate unvisited neighbors.
 
     This is the one definition of "fog of war": what's revealed on the map
@@ -51,7 +51,7 @@ def room_snapshots(
     map always agree on what's revealed.
     """
     snapshots = {}
-    for room_id in _known_room_ids(rooms, visited):
+    for room_id in known_room_ids(rooms, visited):
         room = rooms[room_id]
         x, y = coords[room_id]
         snapshots[room_id] = {
@@ -76,7 +76,7 @@ def render_map(
     if not visited:
         return ["You haven't explored anywhere yet."]
 
-    known = _known_room_ids(rooms, visited)
+    known = known_room_ids(rooms, visited)
 
     xs = [coords[room_id][0] for room_id in known]
     ys = [coords[room_id][1] for room_id in known]

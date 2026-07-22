@@ -166,6 +166,10 @@ function renderMap(rooms) {
       if (room.monster && MONSTER_SPRITES[room.monster]) {
         drawSprite(MONSTER_SPRITES[room.monster], cellX, cellY);
       }
+      (room.players || []).forEach((otherPlayer) => {
+        const spriteFile = CLASS_SPRITES[otherPlayer.player_class];
+        if (spriteFile) drawSprite(spriteFile, cellX, cellY);
+      });
       if (room.current) {
         const spriteFile = CLASS_SPRITES[currentPlayerClass];
         if (spriteFile) drawSprite(spriteFile, cellX, cellY);

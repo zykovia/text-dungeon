@@ -119,6 +119,42 @@ def test_two_games_sharing_a_world_see_the_same_room_state():
     assert game_b.current_room().monster is game_a.current_room().monster
 
 
+def test_knows_room_true_for_visited_and_neighboring_rooms():
+    game = Game(seed=1)
+    game.look()
+    room = game.current_room()
+    neighbor_id = next(iter(room.exits.values()))
+
+    assert game.knows_room(1, game.player.current_room) is True
+    assert game.knows_room(1, neighbor_id) is True
+
+
+def test_knows_room_false_for_an_unrelated_room():
+    game = Game(seed=1)
+    game.look()
+    room = game.current_room()
+    unrelated_id = next(
+        rid
+        for rid in game.rooms
+        if rid != game.player.current_room and rid not in room.exits.values()
+    )
+
+    assert game.knows_room(1, unrelated_id) is False
+
+
+def test_knows_room_false_for_a_same_named_room_on_a_different_level():
+    world = World()
+    game = Game(seed=1, world=world)
+    game.look()
+    assert "room_1" in game.rooms  # sanity: this id exists on level 1
+
+    world.level_rooms(2, player_class=None, upgrade_slot=None, upgrade_tier=None, seed=2)
+
+    # Even though "room_1" is visited/known on level 1, a level-2 query for
+    # the same id must not match - room ids aren't unique across levels.
+    assert game.knows_room(2, "room_1") is False
+
+
 def test_new_player_creation_without_a_world_gets_a_private_world():
     game_a = Game(seed=1, player_class="Warrior")
     game_b = Game(seed=1, player_class="Warrior")

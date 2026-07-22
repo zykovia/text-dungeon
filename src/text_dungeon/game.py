@@ -6,7 +6,7 @@ from .character import DEFAULT_PLAYER_CLASS, create_player
 from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
-from .minimap import compute_coords, room_snapshots
+from .minimap import compute_coords, known_room_ids, room_snapshots
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
 from .templates import BOSS, MAX_ITEM_TIER, SUPER_BOSS, WIN_ITEM_NAME, skill_template_for
@@ -131,6 +131,17 @@ class Game:
 
     def current_room(self) -> Room:
         return self.rooms[self.player.current_room]
+
+    def knows_room(self, dungeon_level: int, room_id: str) -> bool:
+        """Whether this player's own fog-of-war currently reveals this room.
+
+        Used by the multiplayer broadcast layer to decide who to notify of
+        an event elsewhere in the shared world. Checks dungeon_level first
+        since room ids are only unique within a single level.
+        """
+        return self.player.dungeon_level == dungeon_level and room_id in known_room_ids(
+            self.rooms, self.player.visited
+        )
 
     def look(self) -> None:
         room = self.current_room()
