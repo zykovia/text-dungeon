@@ -291,8 +291,6 @@ function renderStatus(status) {
   }
 }
 
-const LAST_WORLD_ID_KEY = "lastWorldId";
-
 function characterSummaryText(character) {
   return (
     `${character.name} the ${character.player_class} — Level ${character.level}, ` +
@@ -302,12 +300,6 @@ function characterSummaryText(character) {
 }
 
 function showWorldSelect(options, onChoose) {
-  const remembered = localStorage.getItem(LAST_WORLD_ID_KEY);
-  if (remembered && options.some((option) => option.id === remembered)) {
-    onChoose(remembered);
-    return;
-  }
-
   input.disabled = true;
   worldOptions.innerHTML = "";
   options.forEach((option) => {
@@ -424,10 +416,7 @@ function connect() {
   socket.addEventListener("message", (event) => {
     const data = JSON.parse(event.data);
     if (data.type === "world_select") {
-      showWorldSelect(data.options, (chosenId) => {
-        localStorage.setItem(LAST_WORLD_ID_KEY, chosenId);
-        socket.send(chosenId);
-      });
+      showWorldSelect(data.options, (chosenId) => socket.send(chosenId));
       return;
     }
     if (data.type === "class_select") {
