@@ -66,10 +66,14 @@ These were part of the roadmap discussion but have already been built:
   as dev dependencies, plus `scripts/check.sh` to run both in one command.
 - **World select ingress (single-service version).** Players pick from a
   fixed catalog of worlds before entering the dungeon instead of always
-  landing in one implicit world. Each world is an independently persisted
-  save namespace (`<world_id>/<player_id>.json`); worlds the player already
-  has a character in show that character's class, level, HP, dungeon floor,
-  and item count right on the select screen, so they can recognize their own
+  landing in one implicit world. The picker shows on every connection, no
+  exceptions — an earlier version silently skipped it on a browser that had
+  already picked before, which read as a bug (mobile always asked, desktop
+  never did) rather than a convenience, so that shortcut was removed. Each
+  world is an independently persisted save namespace
+  (`<world_id>/<player_id>.json`); worlds the player already has a
+  character in show that character's class, level, HP, dungeon floor, and
+  item count right on the select screen, so they can recognize their own
   character before rejoining it. This is the player-facing half of the
   original design, built inside the one existing service: dungeons stay
   solo-per-player (no shared/concurrent state between players in a world
