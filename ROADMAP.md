@@ -118,6 +118,15 @@ These were part of the roadmap discussion but have already been built:
   lowercased before dispatch, which would have silently mangled chat
   message casing; only the verb is lowercased now, and casing is preserved
   verbatim in what players say.
+- **Cleric heals allies.** `cast heal` now also heals every other player in
+  the caster's current room or one room over, on top of the caster
+  themselves — support for the party, not just self-sustain. Range is
+  literal current-position adjacency, a different (narrower) concept than
+  the fog-of-war rule used for the map/combat visibility elsewhere. A downed
+  ally (0 HP, waiting to respawn) is deliberately excluded from targeting —
+  this isn't a revive mechanic. Every other class's skills that happen to
+  reuse the same underlying heal effect (Warrior's rally/second wind,
+  Wizard's drain life) are unaffected; only Cleric's `heal` gained this.
 
 ## Planned
 
