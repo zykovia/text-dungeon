@@ -103,6 +103,16 @@ These were part of the roadmap discussion but have already been built:
   player's own smaller save, and survives server restarts. This ships the
   single-service version — multi-container routing (splitting a world
   across separately deployed containers) isn't part of it, noted below.
+- **Narrated presence and a chat command.** Movement/arrival/departure
+  broadcasts now carry actual text ("Aragorn enters the room."/"Aragorn
+  leaves the room.") instead of just a silent map refresh. A new
+  `say <message>` command lets players talk, deliberately scoped to a
+  stricter same-room audience than combat/movement's fog-of-war rule —
+  seeing a room on your map shouldn't mean overhearing it. Along the way,
+  fixed a real defect chat exposed: every command used to be fully
+  lowercased before dispatch, which would have silently mangled chat
+  message casing; only the verb is lowercased now, and casing is preserved
+  verbatim in what players say.
 
 ## Planned
 
@@ -119,8 +129,6 @@ chosen world actually lives on.
 
 Not yet committed to, but worth keeping in mind as the above lands:
 
-- Narrated presence/chat (e.g. "Aragorn entered the room" as readable text,
-  not just a sprite appearing on the map, which already shipped above).
 - A leaderboard or hall of fame for completed runs.
 - 2D graphics polish: motion/animation, real autotiling, and per-item icons
   (Phase 5 and the deferred pieces of Phases 3-4 in `2D-GRAPHICS-PLAN.md`),
