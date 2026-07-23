@@ -105,10 +105,15 @@ These were part of the roadmap discussion but have already been built:
   across separately deployed containers) isn't part of it, noted below.
 - **Narrated presence and a chat command.** Movement/arrival/departure
   broadcasts now carry actual text ("Aragorn enters the room."/"Aragorn
-  leaves the room.") instead of just a silent map refresh. A new
-  `say <message>` command lets players talk, deliberately scoped to a
-  stricter same-room audience than combat/movement's fog-of-war rule —
-  seeing a room on your map shouldn't mean overhearing it. Along the way,
+  leaves the room.") instead of just a silent map refresh — but only for
+  whoever's literally in that room. The map/status refresh itself still
+  goes out to everyone who can see the room (fog-of-war), same as combat;
+  an early version also sent the narrated text to that wider audience,
+  which meant a bystander who could merely see two adjacent rooms got text
+  for both sides of someone else's move ("enters, leaves, enters again"),
+  fixed by splitting the two. A new `say <message>` command lets players
+  talk; unlike combat/movement, it's a world-wide channel — anyone
+  connected to that world hears it, not just people nearby. Along the way,
   fixed a real defect chat exposed: every command used to be fully
   lowercased before dispatch, which would have silently mangled chat
   message casing; only the verb is lowercased now, and casing is preserved
