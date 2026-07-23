@@ -42,8 +42,11 @@ def _player_ids_in_room(
 ) -> list[str]:
     """Who's literally standing in this exact room right now.
 
-    Stricter than _player_ids_who_know_room: used for chat, where "you can
-    see this room on your map" shouldn't mean "you can overhear it."
+    Stricter than _player_ids_who_know_room. Used for the "players" roster in
+    _status_with_players, and for movement narration text specifically -
+    someone who can merely see a room on their map (fog-of-war) still
+    shouldn't get an "X enters/leaves the room" line for a room they're not
+    actually in, even though their map's player list updates either way.
     """
     return [
         player_id
@@ -60,12 +63,21 @@ def _player_ids_who_know_room(
     room_id: str,
     exclude_player_id: str,
 ) -> list[str]:
-    """Anyone whose own fog-of-war reveals this room, used for combat/presence."""
+    """Anyone whose own fog-of-war reveals this room, used for combat and the
+    silent map/status refresh on movement."""
     return [
         player_id
         for player_id, (_, other_game) in sessions.items()
         if player_id != exclude_player_id and other_game.knows_room(dungeon_level, room_id)
     ]
+
+
+def _player_ids_in_world(
+    sessions: dict[str, tuple[WebSocket, Game]], exclude_player_id: str
+) -> list[str]:
+    """Every other connected session in this world, used for chat - say is a
+    world-wide channel, not scoped to a room or fog-of-war."""
+    return [player_id for player_id in sessions if player_id != exclude_player_id]
 
 
 def _status_with_players(
@@ -97,6 +109,22 @@ def _mark_pending(
         lines = pending.setdefault(player_id, [])
         if message:
             lines.append(message)
+
+
+def _mark_room_presence(
+    pending: dict[str, list[str]],
+    sessions: dict[str, tuple[WebSocket, Game]],
+    dungeon_level: int,
+    room_id: str,
+    exclude_player_id: str,
+    message: str,
+) -> None:
+    """Silent map/status refresh for anyone who can see the room (fog-of-war),
+    plus the narrated text only for whoever's literally standing in it."""
+    known = _player_ids_who_know_room(sessions, dungeon_level, room_id, exclude_player_id)
+    present = _player_ids_in_room(sessions, dungeon_level, room_id, exclude_player_id)
+    _mark_pending(pending, known)
+    _mark_pending(pending, present, message)
 
 
 async def _flush(sessions: dict[str, tuple[WebSocket, Game]], pending: dict[str, list[str]]) -> None:
@@ -228,11 +256,12 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
 
         # Arrival: let anyone who can already see this room know we're here.
         arrival_pending: dict[str, list[str]] = {}
-        _mark_pending(
+        _mark_room_presence(
             arrival_pending,
-            _player_ids_who_know_room(
-                sessions, game.player.dungeon_level, game.player.current_room, player_id
-            ),
+            sessions,
+            game.player.dungeon_level,
+            game.player.current_room,
+            player_id,
             f"{game.player.name} enters the room.",
         )
         await _flush(sessions, arrival_pending)
@@ -256,22 +285,18 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
                         pending, _player_ids_who_know_room(sessions, level, room_id, player_id), message
                     )
                 if game.last_chat:
-                    level, room_id, message = game.last_chat
+                    message = game.last_chat
                     game.last_chat = None
-                    _mark_pending(
-                        pending, _player_ids_in_room(sessions, level, room_id, player_id), message
-                    )
+                    _mark_pending(pending, _player_ids_in_world(sessions, player_id), message)
                 if before != after:
                     before_level, before_room = before
                     after_level, after_room = after
-                    _mark_pending(
-                        pending,
-                        _player_ids_who_know_room(sessions, before_level, before_room, player_id),
+                    _mark_room_presence(
+                        pending, sessions, before_level, before_room, player_id,
                         f"{game.player.name} leaves the room.",
                     )
-                    _mark_pending(
-                        pending,
-                        _player_ids_who_know_room(sessions, after_level, after_room, player_id),
+                    _mark_room_presence(
+                        pending, sessions, after_level, after_room, player_id,
                         f"{game.player.name} enters the room.",
                     )
                 await _flush(sessions, pending)
@@ -297,11 +322,12 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
         # see us know we're gone.
         sessions.pop(player_id, None)
         departure_pending: dict[str, list[str]] = {}
-        _mark_pending(
+        _mark_room_presence(
             departure_pending,
-            _player_ids_who_know_room(
-                sessions, game.player.dungeon_level, game.player.current_room, player_id
-            ),
+            sessions,
+            game.player.dungeon_level,
+            game.player.current_room,
+            player_id,
             f"{game.player.name} leaves the room.",
         )
         await _flush(sessions, departure_pending)

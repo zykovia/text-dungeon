@@ -206,16 +206,11 @@ def test_last_broadcast_is_set_on_a_successful_take():
 
 def test_say_emits_for_the_sender_and_sets_last_chat():
     game = Game(seed=1)
-    room = game.current_room()
 
     game.handle_command("say hello there")
 
     assert "You say: hello there" in game.output
-    assert game.last_chat is not None
-    level, room_id, message = game.last_chat
-    assert level == game.player.dungeon_level
-    assert room_id == room.id
-    assert message == f"{game.player.name} says: hello there"
+    assert game.last_chat == f"{game.player.name} says: hello there"
 
 
 def test_say_preserves_message_casing():
@@ -224,7 +219,7 @@ def test_say_preserves_message_casing():
     game.handle_command("say Hello There")
 
     assert "You say: Hello There" in game.output
-    assert game.last_chat[2] == f"{game.player.name} says: Hello There"
+    assert game.last_chat == f"{game.player.name} says: Hello There"
 
 
 def test_say_rejects_an_empty_message():

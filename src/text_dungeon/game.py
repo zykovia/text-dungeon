@@ -37,7 +37,7 @@ class Game:
         self.running = running
         self.output: list[str] = []
         self.last_broadcast: tuple[int, str, str] | None = None
-        self.last_chat: tuple[int, str, str] | None = None
+        self.last_chat: str | None = None
 
     def _load_current_level(self, seed: int | None = None) -> None:
         """Point self.rooms/coords at the player's current level in the shared world.
@@ -302,9 +302,8 @@ class Game:
         if len(message) > 200:
             self.emit("That's too long to say. Try something shorter.")
             return
-        room = self.current_room()
         self.emit(f"You say: {message}")
-        self.last_chat = (self.player.dungeon_level, room.id, f"{self.player.name} says: {message}")
+        self.last_chat = f"{self.player.name} says: {message}"
 
     def show_skills(self) -> None:
         if not self.player.skills:

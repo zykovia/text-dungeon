@@ -3,7 +3,9 @@ from text_dungeon.game import Game
 from text_dungeon.models import Room
 from text_dungeon.web.server import (
     _mark_pending,
+    _mark_room_presence,
     _player_ids_in_room,
+    _player_ids_in_world,
     _player_ids_who_know_room,
     _status_with_players,
 )
@@ -196,3 +198,55 @@ def test_mark_pending_adds_a_recipient_with_no_message_for_a_silent_event():
     _mark_pending(pending, ["viewer"])
 
     assert pending == {"viewer": []}
+
+
+def test_player_ids_in_world_includes_everyone_regardless_of_room_or_level():
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    same_room = _game_at(world, 1, "entrance", name="SameRoom")
+    far_room = _game_at(world, 1, "vault", name="FarRoom")
+    other_level = create_player("Ranger", name="OtherLevel")
+    other_level.dungeon_level = 2
+    other_level_game = Game(player=other_level, world=world)
+    sessions = {
+        "acting": (None, acting),
+        "same-room": (None, same_room),
+        "far-room": (None, far_room),
+        "other-level": (None, other_level_game),
+    }
+
+    matches = _player_ids_in_world(sessions, exclude_player_id="acting")
+
+    assert set(matches) == {"same-room", "far-room", "other-level"}
+
+
+def test_player_ids_in_world_excludes_only_the_acting_player():
+    sessions = {"acting": (None, None)}
+
+    assert _player_ids_in_world(sessions, exclude_player_id="acting") == []
+
+
+def test_mark_room_presence_gives_a_visible_neighbor_a_silent_refresh_only():
+    """A bystander who can see the room but isn't in it gets a status
+    refresh (no message) - the fix for text leaking to fog-of-war viewers."""
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    neighbor_viewer = _game_at(world, 1, "entrance", name="Neighbor")  # sees hallway too
+    sessions = {"acting": (None, acting), "neighbor": (None, neighbor_viewer)}
+
+    pending: dict[str, list[str]] = {}
+    _mark_room_presence(pending, sessions, 1, "hallway", "acting", "Acting enters the room.")
+
+    assert pending == {"neighbor": []}
+
+
+def test_mark_room_presence_gives_someone_literally_in_the_room_the_message_too():
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    same_room = _game_at(world, 1, "entrance", name="SameRoom")
+    sessions = {"acting": (None, acting), "same-room": (None, same_room)}
+
+    pending: dict[str, list[str]] = {}
+    _mark_room_presence(pending, sessions, 1, "entrance", "acting", "Acting enters the room.")
+
+    assert pending == {"same-room": ["Acting enters the room."]}
