@@ -2,6 +2,7 @@ from text_dungeon.character import create_player
 from text_dungeon.game import Game
 from text_dungeon.models import Room
 from text_dungeon.web.server import (
+    _allies_in_range,
     _mark_pending,
     _mark_room_presence,
     _player_ids_in_room,
@@ -250,3 +251,78 @@ def test_mark_room_presence_gives_someone_literally_in_the_room_the_message_too(
     _mark_room_presence(pending, sessions, 1, "entrance", "acting", "Acting enters the room.")
 
     assert pending == {"same-room": ["Acting enters the room."]}
+
+
+def test_allies_in_range_matches_same_room():
+    world = _chain_world()
+    caster = _game_at(world, 1, "entrance", name="Caster")
+    same_room = _game_at(world, 1, "entrance", name="SameRoom")
+    sessions = {"caster": (None, caster), "same-room": (None, same_room)}
+
+    allies = _allies_in_range(caster, sessions, exclude_player_id="caster")
+
+    assert allies == [same_room.player]
+
+
+def test_allies_in_range_matches_an_adjacent_room():
+    world = _chain_world()
+    caster = _game_at(world, 1, "entrance", name="Caster")
+    neighbor = _game_at(world, 1, "hallway", name="Neighbor")  # one exit away from entrance
+    sessions = {"caster": (None, caster), "neighbor": (None, neighbor)}
+
+    allies = _allies_in_range(caster, sessions, exclude_player_id="caster")
+
+    assert allies == [neighbor.player]
+
+
+def test_allies_in_range_excludes_a_non_adjacent_room():
+    world = _chain_world()
+    caster = _game_at(world, 1, "entrance", name="Caster")
+    far = _game_at(world, 1, "vault", name="Far")  # two hops from entrance, not adjacent
+    sessions = {"caster": (None, caster), "far": (None, far)}
+
+    allies = _allies_in_range(caster, sessions, exclude_player_id="caster")
+
+    assert allies == []
+
+
+def test_allies_in_range_does_not_cross_levels_even_with_the_same_room_id():
+    world = World()
+    world.level_rooms(1, player_class=None, upgrade_slot=None, upgrade_tier=None, seed=1)
+    world.level_rooms(2, player_class=None, upgrade_slot=None, upgrade_tier=None, seed=2)
+
+    caster_player = create_player("Cleric", name="Caster")
+    caster_player.dungeon_level = 1
+    caster = Game(player=caster_player, world=world)
+    caster.player.current_room = "room_1"
+
+    other_player = create_player("Warrior", name="Other")
+    other_player.dungeon_level = 2
+    other = Game(player=other_player, world=world)
+    other.player.current_room = "room_1"
+
+    sessions = {"caster": (None, caster), "other": (None, other)}
+
+    allies = _allies_in_range(caster, sessions, exclude_player_id="caster")
+
+    assert allies == []
+
+
+def test_allies_in_range_excludes_a_dead_player():
+    world = _chain_world()
+    caster = _game_at(world, 1, "entrance", name="Caster")
+    dead = _game_at(world, 1, "entrance", name="Dead")
+    dead.player.hp = 0
+    sessions = {"caster": (None, caster), "dead": (None, dead)}
+
+    allies = _allies_in_range(caster, sessions, exclude_player_id="caster")
+
+    assert allies == []
+
+
+def test_allies_in_range_excludes_the_caster():
+    world = _chain_world()
+    caster = _game_at(world, 1, "entrance", name="Caster")
+    sessions = {"caster": (None, caster)}
+
+    assert _allies_in_range(caster, sessions, exclude_player_id="caster") == []

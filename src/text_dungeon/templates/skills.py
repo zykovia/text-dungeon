@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 if TYPE_CHECKING:
     from ..models import Player
@@ -20,8 +20,8 @@ class SkillEffect(ABC):
         """Player-facing summary of the mechanical outcome."""
 
     @abstractmethod
-    def apply(self, player: Player, skill_name: str) -> str:
-        """Mutate `player` in place and return a message to emit."""
+    def apply(self, player: Player, skill_name: str, allies: Sequence[Player] = ()) -> str:
+        """Mutate `player` (and possibly `allies`) in place, return a message to emit."""
 
 
 @dataclass(frozen=True)
@@ -31,10 +31,31 @@ class Heal(SkillEffect):
     def describe(self) -> str:
         return f"heals {self.amount} HP"
 
-    def apply(self, player: Player, skill_name: str) -> str:
+    def apply(self, player: Player, skill_name: str, allies: Sequence[Player] = ()) -> str:
         healed = min(self.amount, player.max_hp - player.hp)
         player.hp += healed
         return f"You cast {skill_name} and recover {healed} HP. ({player.hp}/{player.max_hp} HP)"
+
+
+@dataclass(frozen=True)
+class HealAllies(SkillEffect):
+    """Like Heal, but also mends any ally passed in - used only by the
+    Cleric's "heal" skill, not the other classes' self-only heals."""
+
+    amount: int
+
+    def describe(self) -> str:
+        return f"heals {self.amount} HP (also nearby allies)"
+
+    def apply(self, player: Player, skill_name: str, allies: Sequence[Player] = ()) -> str:
+        healed = min(self.amount, player.max_hp - player.hp)
+        player.hp += healed
+        for ally in allies:
+            ally.hp = min(ally.max_hp, ally.hp + self.amount)
+        message = f"You cast {skill_name} and recover {healed} HP. ({player.hp}/{player.max_hp} HP)"
+        if allies:
+            message += f" Your prayer washes over {len(allies)} nearby ally(ies)."
+        return message
 
 
 @dataclass(frozen=True)
@@ -44,7 +65,7 @@ class AttackBuff(SkillEffect):
     def describe(self) -> str:
         return f"+{self.amount} to your next attack"
 
-    def apply(self, player: Player, skill_name: str) -> str:
+    def apply(self, player: Player, skill_name: str, allies: Sequence[Player] = ()) -> str:
         player.pending_attack_buff += self.amount
         return f"You channel {skill_name}, empowering your next attack."
 
@@ -54,7 +75,7 @@ class Block(SkillEffect):
     def describe(self) -> str:
         return "blocks the monster's next attack"
 
-    def apply(self, player: Player, skill_name: str) -> str:
+    def apply(self, player: Player, skill_name: str, allies: Sequence[Player] = ()) -> str:
         player.pending_block = True
         return f"You cast {skill_name}, readying yourself to block the next blow."
 
@@ -66,7 +87,7 @@ class MonsterDebuff(SkillEffect):
     def describe(self) -> str:
         return f"-{self.amount} to the monster's next attack"
 
-    def apply(self, player: Player, skill_name: str) -> str:
+    def apply(self, player: Player, skill_name: str, allies: Sequence[Player] = ()) -> str:
         player.pending_monster_debuff += self.amount
         return f"You cast {skill_name}, weakening your foe's next strike."
 
@@ -155,7 +176,7 @@ SKILL_TEMPLATES = [
         player_class="Cleric",
         unlock_level=1,
         mana_cost=3,
-        effects=(Heal(6),),
+        effects=(HealAllies(6),),
     ),
     SkillTemplate(
         "bless",

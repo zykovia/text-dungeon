@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from ..character import default_name_for_class
 from ..game import Game
+from ..models import Player
 from ..persistence import delete_save, load_player, load_summary, load_world, save_player, save_world
 from ..templates import CLASS_TEMPLATES, WORLD_TEMPLATES
 from ..world_state import World
@@ -78,6 +79,27 @@ def _player_ids_in_world(
     """Every other connected session in this world, used for chat - say is a
     world-wide channel, not scoped to a room or fog-of-war."""
     return [player_id for player_id in sessions if player_id != exclude_player_id]
+
+
+def _allies_in_range(
+    game: Game, sessions: dict[str, tuple[WebSocket, Game]], exclude_player_id: str
+) -> list[Player]:
+    """Other players in the caster's current room or one exit away, for
+    heal-type skills. Excludes non-alive players deliberately: a downed
+    player sits in their last room until their own next command triggers
+    respawn(), and healing them there would be an implicit revive this game
+    doesn't otherwise have.
+    """
+    room = game.current_room()
+    nearby_room_ids = {room.id, *room.exits.values()}
+    return [
+        other_game.player
+        for player_id, (_, other_game) in sessions.items()
+        if player_id != exclude_player_id
+        and other_game.player.alive
+        and other_game.player.dungeon_level == game.player.dungeon_level
+        and other_game.player.current_room in nearby_room_ids
+    ]
 
 
 def _status_with_players(
@@ -269,6 +291,10 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
         while True:
             command = (await websocket.receive_text()).strip()
             if command:
+                verb = command.split(" ", 1)[0].lower()
+                if verb == "cast":
+                    game.allies_in_range = _allies_in_range(game, sessions, player_id)
+
                 before = (game.player.dungeon_level, game.player.current_room)
                 game.handle_command(command)
                 if not game.player.alive:
@@ -288,6 +314,20 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
                     message = game.last_chat
                     game.last_chat = None
                     _mark_pending(pending, _player_ids_in_world(sessions, player_id), message)
+                # Identity (`is`) matching is only safe because nothing between
+                # capturing allies_in_range (above) and this point awaits -
+                # a single-threaded event loop guarantees no other session's
+                # play() coroutine can swap a sessions[pid] entry mid-command.
+                for ally, amount in game.last_ally_heals:
+                    owning_id = next(
+                        (pid for pid, (_, g) in sessions.items() if g.player is ally), None
+                    )
+                    if owning_id is not None:
+                        _mark_pending(
+                            pending,
+                            [owning_id],
+                            f"{game.player.name}'s heal washes over you, restoring {amount} HP.",
+                        )
                 if before != after:
                     before_level, before_room = before
                     after_level, after_room = after

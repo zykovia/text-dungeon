@@ -5,6 +5,7 @@ from text_dungeon.templates.skills import (
     AttackBuff,
     Block,
     Heal,
+    HealAllies,
     MonsterDebuff,
     SkillTemplate,
 )
@@ -32,6 +33,42 @@ def test_heal_effect_caps_at_max_hp():
     effect.apply(player, "rally")
 
     assert player.hp == 20
+
+
+def test_heal_allies_effect_heals_self_with_no_allies_like_plain_heal():
+    effect = HealAllies(6)
+    player = Player(name="test", player_class="Cleric", hp=10, max_hp=20)
+
+    assert effect.describe() == "heals 6 HP (also nearby allies)"
+    message = effect.apply(player, "heal")
+
+    assert player.hp == 16
+    assert "recover 6 HP" in message
+    assert "ally" not in message
+
+
+def test_heal_allies_effect_heals_every_ally_in_range():
+    effect = HealAllies(6)
+    player = Player(name="caster", player_class="Cleric", hp=10, max_hp=20)
+    ally_a = Player(name="a", player_class="Warrior", hp=5, max_hp=20)
+    ally_b = Player(name="b", player_class="Ranger", hp=8, max_hp=20)
+
+    message = effect.apply(player, "heal", [ally_a, ally_b])
+
+    assert player.hp == 16
+    assert ally_a.hp == 11
+    assert ally_b.hp == 14
+    assert "2 nearby ally(ies)" in message
+
+
+def test_heal_allies_effect_caps_each_ally_individually_at_their_own_max_hp():
+    effect = HealAllies(10)
+    player = Player(name="caster", player_class="Cleric", hp=20, max_hp=20)
+    nearly_full = Player(name="a", player_class="Warrior", hp=18, max_hp=20)
+
+    effect.apply(player, "heal", [nearly_full])
+
+    assert nearly_full.hp == 20
 
 
 def test_attack_buff_effect_describes_and_applies():

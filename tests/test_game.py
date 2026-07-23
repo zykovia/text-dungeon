@@ -603,6 +603,46 @@ def test_cast_heal_skill_caps_at_max_hp():
     assert game.player.hp == game.player.max_hp
 
 
+def test_cast_heal_heals_allies_in_range_and_reports_last_ally_heals():
+    game = Game(seed=1, player_class="Cleric")
+    game.player.hp = 5
+    ally = create_player("Warrior", name="Ally")
+    ally.hp = 10
+    ally.max_hp = 20
+    game.allies_in_range = [ally]
+
+    game.cast("heal")
+
+    assert ally.hp == 16
+    assert game.last_ally_heals == [(ally, 6)]
+
+
+def test_cast_heal_excludes_a_full_hp_ally_from_last_ally_heals():
+    game = Game(seed=1, player_class="Cleric")
+    game.player.hp = 5
+    full_hp_ally = create_player("Warrior", name="Full")
+    full_hp_ally.hp = full_hp_ally.max_hp
+    game.allies_in_range = [full_hp_ally]
+
+    game.cast("heal")
+
+    assert game.last_ally_heals == []
+
+
+def test_last_ally_heals_resets_at_the_start_of_the_next_command():
+    game = Game(seed=1, player_class="Cleric")
+    game.player.hp = 5
+    ally = create_player("Warrior", name="Ally")
+    ally.hp = 10
+    game.allies_in_range = [ally]
+    game.cast("heal")
+    assert game.last_ally_heals != []
+
+    game.handle_command("look")
+
+    assert game.last_ally_heals == []
+
+
 def test_cast_buff_skill_sets_pending_attack_buff():
     game = Game(seed=1, player_class="Ranger")
 

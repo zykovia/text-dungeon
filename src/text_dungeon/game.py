@@ -38,6 +38,14 @@ class Game:
         self.output: list[str] = []
         self.last_broadcast: tuple[int, str, str] | None = None
         self.last_chat: str | None = None
+        # Populated from OUTSIDE by web/server.py, right before a `cast`
+        # command is dispatched - the one deliberate exception to Game
+        # having no awareness of other sessions. Not reset by
+        # handle_command() (unlike last_broadcast/last_chat, which are
+        # outputs Game produces) - server.py sets it fresh before every
+        # relevant command, so it's always current when cast() reads it.
+        self.allies_in_range: list[Player] = []
+        self.last_ally_heals: list[tuple[Player, int]] = []
 
     def _load_current_level(self, seed: int | None = None) -> None:
         """Point self.rooms/coords at the player's current level in the shared world.
@@ -129,6 +137,7 @@ class Game:
     def handle_command(self, command: str) -> None:
         self.last_broadcast = None
         self.last_chat = None
+        self.last_ally_heals = []
         dispatch_command(self, command)
 
     def current_room(self) -> Room:
@@ -331,8 +340,14 @@ class Game:
             )
             return
 
-        for message in skills.apply_skill(self.player, skill):
+        before_hp = [ally.hp for ally in self.allies_in_range]
+        for message in skills.apply_skill(self.player, skill, self.allies_in_range):
             self.emit(message)
+        self.last_ally_heals = [
+            (ally, ally.hp - before)
+            for ally, before in zip(self.allies_in_range, before_hp)
+            if ally.hp - before > 0
+        ]
 
     def _map_lines(self) -> list[str]:
         return build_map_lines(
