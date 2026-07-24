@@ -147,3 +147,6 @@ Not yet committed to, but worth keeping in mind as the above lands:
 - 2D graphics polish: motion/animation, real autotiling, and per-item icons
   (Phase 5 and the deferred pieces of Phases 3-4 in `2D-GRAPHICS-PLAN.md`),
   now that the first increment has shipped above.
+- A first-person (Wizardry/Dungeon Master-style) viewport for the web
+  client, as an addition to the top-down map rather than a replacement for
+  it. Full write-up in `FIRST-PERSON-PLAN.md`.
