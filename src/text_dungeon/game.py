@@ -99,12 +99,14 @@ class Game:
             self.player.current_room = "entrance"
             self.player.visited = set()
 
-    def _next_upgrade(self) -> tuple[str, int]:
-        """Which slot/tier is due next for this player's class (drops and shop stock alike)."""
-        slot = self.player.next_upgrade_slot
+    def _next_upgrade_tier(self, slot: str) -> int:
         equipped = getattr(self.player, slot)
-        tier = min((equipped.tier if equipped else 0) + 1, MAX_ITEM_TIER)
-        return slot, tier
+        return min((equipped.tier if equipped else 0) + 1, MAX_ITEM_TIER)
+
+    def _next_upgrade(self) -> tuple[str, int]:
+        """Which slot/tier is due next for floor-item-drop generation (alternates by floor)."""
+        slot = self.player.next_upgrade_slot
+        return slot, self._next_upgrade_tier(slot)
 
     def respawn(self) -> None:
         """Return to the entrance of the current (persistent) level after death."""
@@ -124,6 +126,7 @@ class Game:
         self.player.next_upgrade_slot = (
             "off_hand" if self.player.next_upgrade_slot == "main_hand" else "main_hand"
         )
+        self.player.purchased_upgrade_slots_this_level = set()
         self.emit(
             f"A new dungeon awaits below, larger than the last (depth {self.player.dungeon_level})."
         )
@@ -275,12 +278,15 @@ class Game:
         self.emit(f"You unequip the {inventory.item_label(item)}.")
 
     def shop_catalog(self) -> list[ItemTemplate]:
-        """Potions plus this level's next weapon/off-hand upgrade for the player's class."""
-        slot, tier = self._next_upgrade()
+        """Potions plus each equipment slot's next upgrade, unless already bought this level."""
         catalog = list(POTION_TEMPLATES)
-        upgrade = item_template_for(self.player.player_class, slot, tier)
-        if upgrade is not None:
-            catalog.append(upgrade)
+        for slot in ("main_hand", "off_hand"):
+            if slot in self.player.purchased_upgrade_slots_this_level:
+                continue
+            tier = self._next_upgrade_tier(slot)
+            upgrade = item_template_for(self.player.player_class, slot, tier)
+            if upgrade is not None:
+                catalog.append(upgrade)
         return catalog
 
     def show_shop(self) -> None:
@@ -307,6 +313,8 @@ class Game:
             return
         self.player.gold -= price
         self.player.inventory.append(item_from_template(template))
+        if template.slot is not None:
+            self.player.purchased_upgrade_slots_this_level.add(template.slot)
         self.emit(f"You buy the {template.name} for {price} gold. ({self.player.gold} gold left)")
 
     def sell(self, item_name: str) -> None:

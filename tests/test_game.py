@@ -486,6 +486,63 @@ def test_sell_refuses_an_equipped_item():
     assert game.player.main_hand is equipped
 
 
+def test_shop_catalog_offers_both_main_hand_and_off_hand_upgrades():
+    game = Game(seed=1, player_class="Warrior")
+
+    slots = {template.slot for template in game.shop_catalog()}
+
+    assert "main_hand" in slots
+    assert "off_hand" in slots
+
+
+def test_buying_a_main_hand_upgrade_removes_it_from_the_catalog_but_keeps_off_hand():
+    game = Game(seed=1, player_class="Warrior")
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+    game.player.gold = 1000
+    main_hand_upgrade = next(t for t in game.shop_catalog() if t.slot == "main_hand")
+
+    game.buy(main_hand_upgrade.name)
+    gold_after_first_buy = game.player.gold
+    slots_after_first_buy = {t.slot for t in game.shop_catalog()}
+
+    assert "main_hand" not in slots_after_first_buy
+    assert "off_hand" in slots_after_first_buy
+
+    game.buy(main_hand_upgrade.name)
+
+    assert game.player.gold == gold_after_first_buy
+    assert sum(1 for item in game.player.inventory if item.name == main_hand_upgrade.name) == 1
+
+
+def test_equipping_a_bought_upgrade_does_not_unlock_a_higher_tier_the_same_level():
+    game = Game(seed=1, player_class="Warrior")
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+    game.player.gold = 1000
+    main_hand_upgrade = next(t for t in game.shop_catalog() if t.slot == "main_hand")
+
+    game.buy(main_hand_upgrade.name)
+    game.equip(main_hand_upgrade.name)
+
+    assert not any(t.slot == "main_hand" for t in game.shop_catalog())
+
+
+def test_advancing_resets_purchased_upgrade_slots_for_the_new_level():
+    game = Game(seed=1, player_class="Warrior")
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+    game.player.gold = 1000
+    main_hand_upgrade = next(t for t in game.shop_catalog() if t.slot == "main_hand")
+    game.buy(main_hand_upgrade.name)
+
+    game.advance(seed=5)
+
+    slots = {t.slot for t in game.shop_catalog()}
+    assert "main_hand" in slots
+    assert "off_hand" in slots
+
+
 def test_history_records_moves_looks_and_attacks():
     game = Game(seed=1)
     game.current_room().monster = Monster("test monster", hp=5, attack=1)
