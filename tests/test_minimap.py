@@ -1,4 +1,10 @@
-from text_dungeon.minimap import compute_coords, known_room_ids, render_map, room_snapshots
+from text_dungeon.minimap import (
+    compute_coords,
+    confirmed_wall_coords,
+    known_room_ids,
+    render_map,
+    room_snapshots,
+)
 from text_dungeon.models import Item, Monster, Room
 
 
@@ -122,6 +128,40 @@ def test_room_snapshots_lists_item_names():
     snapshots = room_snapshots(rooms, coords, visited={"entrance"}, current_room="entrance")
 
     assert snapshots["entrance"]["items"] == ["bandage"]
+
+
+def test_confirmed_wall_coords_marks_missing_exits_as_walls():
+    rooms = _linear_rooms()
+    coords = compute_coords(rooms)
+
+    walls = confirmed_wall_coords(rooms, coords, visited={"entrance"})
+
+    # entrance sits at (0, 0) with only a north exit, so its other three sides
+    # are confirmed walls.
+    assert walls == {(1, 0), (0, -1), (-1, 0)}
+
+
+def test_confirmed_wall_coords_empty_when_nothing_visited():
+    rooms = _linear_rooms()
+    coords = compute_coords(rooms)
+
+    assert confirmed_wall_coords(rooms, coords, visited=set()) == set()
+
+
+def test_confirmed_wall_coords_can_coincide_with_an_unconnected_room():
+    """A visited room reporting "wall" on one side doesn't rule out some other,
+    unconnected room occupying that same grid coordinate; callers (the known-room
+    lookup takes priority) are responsible for treating it as a room, not a wall."""
+    rooms = {
+        "a": Room(id="a", name="A", description="", exits={}),
+        "b": Room(id="b", name="B", description="", exits={}),
+    }
+    coords = {"a": (0, 0), "b": (1, 0)}
+
+    walls = confirmed_wall_coords(rooms, coords, visited={"a"})
+
+    assert (1, 0) in walls
+    assert coords["b"] == (1, 0)
 
 
 def test_room_snapshots_auto_advance_can_coexist_with_a_live_monster():

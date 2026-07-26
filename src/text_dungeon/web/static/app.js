@@ -11,6 +11,7 @@ const levelText = document.getElementById("level-text");
 const xpText = document.getElementById("xp-text");
 const dungeonText = document.getElementById("dungeon-text");
 const goldText = document.getElementById("gold-text");
+const mapCanvasWrap = document.getElementById("map-canvas-wrap");
 const mapCanvas = document.getElementById("map-canvas");
 const mapCanvasCtx = mapCanvas.getContext("2d");
 const mapEmptyMessage = document.getElementById("map-empty-message");
@@ -49,6 +50,7 @@ const FLOOR_VARIANTS = [
 ];
 const STAIRS_TILE = "floor_stairs.png";
 const WALL_TILE = "wall_mid.png";
+const UNKNOWN_FILL = "#000000";
 const CHEST_ICON = "chest_full_open_anim_f0.png";
 const FLASK_ICON = "flask_red.png";
 const WEAPON_ICON = "weapon_rusty_sword.png";
@@ -84,11 +86,12 @@ const SPRITE_FILES = [
 ];
 
 let lastRoomsRendered = null;
+let lastWallsRendered = null;
 
 const sprites = {};
 SPRITE_FILES.forEach((file) => {
   const img = new Image();
-  img.onload = () => renderMap(lastRoomsRendered);
+  img.onload = () => renderMap(lastRoomsRendered, lastWallsRendered);
   img.src = `/static/tiles/${file}`;
   sprites[file] = img;
 });
@@ -122,7 +125,7 @@ function drawSprite(file, cellX, cellY) {
   mapCanvasCtx.drawImage(img, dx, dy, drawWidth, drawHeight);
 }
 
-function renderMap(rooms) {
+function renderMap(rooms, walls) {
   const roomIds = Object.keys(rooms || {});
   if (roomIds.length === 0) {
     mapCanvas.classList.add("hidden");
@@ -151,6 +154,15 @@ function renderMap(rooms) {
     roomAt[`${rooms[id].x},${rooms[id].y}`] = id;
   });
 
+  // Cells the player has actually confirmed are solid wall (a visited room
+  // with no exit that way). Everything else outside the known rooms is just
+  // unexplored, not wall, so it must render distinctly, or the rectangle of
+  // wall tiles reads as "this whole area is known and there's nothing to find".
+  const wallAt = new Set((walls || []).map(([x, y]) => `${x},${y}`));
+
+  let currentCellX = null;
+  let currentCellY = null;
+
   for (let y = minY; y <= maxY; y++) {
     for (let x = minX; x <= maxX; x++) {
       const cellX = x - minX;
@@ -158,7 +170,12 @@ function renderMap(rooms) {
       const cellY = maxY - y;
       const roomId = roomAt[`${x},${y}`];
       if (roomId === undefined) {
-        drawSprite(WALL_TILE, cellX, cellY);
+        if (wallAt.has(`${x},${y}`)) {
+          drawSprite(WALL_TILE, cellX, cellY);
+        } else {
+          mapCanvasCtx.fillStyle = UNKNOWN_FILL;
+          mapCanvasCtx.fillRect(cellX * destTile, cellY * destTile, destTile, destTile);
+        }
         continue;
       }
       const room = rooms[roomId];
@@ -174,8 +191,22 @@ function renderMap(rooms) {
       if (room.current) {
         const spriteFile = CLASS_SPRITES[currentPlayerClass];
         if (spriteFile) drawSprite(spriteFile, cellX, cellY);
+        currentCellX = cellX;
+        currentCellY = cellY;
       }
     }
+  }
+
+  // The map can grow past the sidebar's fixed size in either direction, and
+  // #map-canvas-wrap scrolls to contain it. Without this, that overflow is a
+  // scrollbar the player has to notice and use themselves; if they don't,
+  // they silently see a cropped, off-center slice of the map and may not
+  // realize their own position has scrolled out of view. Re-centering on the
+  // current room every render means what's visible is always accurate to
+  // where the player actually is.
+  if (currentCellX !== null && mapCanvasWrap) {
+    mapCanvasWrap.scrollLeft = (currentCellX + 0.5) * destTile - mapCanvasWrap.clientWidth / 2;
+    mapCanvasWrap.scrollTop = (currentCellY + 0.5) * destTile - mapCanvasWrap.clientHeight / 2;
   }
 }
 
@@ -216,7 +247,8 @@ function renderStatus(status) {
 
   currentPlayerClass = status.player_class;
   lastRoomsRendered = status.rooms;
-  renderMap(status.rooms);
+  lastWallsRendered = status.walls;
+  renderMap(status.rooms, status.walls);
 
   function itemRow(label, item) {
     const li = document.createElement("li");

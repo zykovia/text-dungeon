@@ -10,7 +10,7 @@ from .commands import handle_command as dispatch_command
 from .gold import gold_for_kill
 from .items import item_from_template
 from .leveling import XP_PER_LEVEL, LevelUp, gain_xp, xp_for_kill
-from .minimap import compute_coords, known_room_ids, room_snapshots
+from .minimap import compute_coords, confirmed_wall_coords, known_room_ids, room_snapshots
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
 from .templates import (
@@ -477,6 +477,14 @@ class Game:
             self.rooms, self.coords, self.player.visited, self.player.current_room
         )
 
+    def _wall_coords(self) -> list[list[int]]:
+        """Grid cells confirmed to be solid wall, for the UI to tell apart from
+        cells that are simply unexplored (see confirmed_wall_coords)."""
+        return [
+            [x, y]
+            for x, y in confirmed_wall_coords(self.rooms, self.coords, self.player.visited)
+        ]
+
     def status(self) -> dict:
         """A snapshot of everything a UI needs for a stats/map/inventory sidebar."""
         in_shop = self.current_room().auto_advance
@@ -524,6 +532,7 @@ class Game:
             ],
             "map_lines": self._map_lines(),
             "rooms": self._known_rooms(),
+            "walls": self._wall_coords(),
         }
 
     def win(self) -> None:

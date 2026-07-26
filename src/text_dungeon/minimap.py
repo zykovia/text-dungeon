@@ -39,6 +39,27 @@ def known_room_ids(rooms: dict[str, Room], visited: set[str]) -> set[str]:
     return known
 
 
+def confirmed_wall_coords(
+    rooms: dict[str, Room], coords: dict[str, tuple[int, int]], visited: set[str]
+) -> set[tuple[int, int]]:
+    """Grid cells the player has confirmed are solid wall.
+
+    A visited room's `exits` dict is the complete truth for that room: a missing
+    cardinal direction means there is definitely no passage there, as opposed to
+    a cell that's simply never been checked. Callers should still treat a cell
+    that also has a known room (see known_room_ids) as a room first, since a
+    wall on one side of a grid cell doesn't rule out an unrelated room sitting
+    there, reached from another direction.
+    """
+    walls = set()
+    for room_id in visited:
+        x, y = coords[room_id]
+        for direction, delta in DIRECTION_DELTAS.items():
+            if direction not in rooms[room_id].exits:
+                walls.add((x + delta[0], y + delta[1]))
+    return walls
+
+
 def room_snapshots(
     rooms: dict[str, Room],
     coords: dict[str, tuple[int, int]],
