@@ -13,7 +13,7 @@ from .world_state import World
 # or misbehave on load (e.g. a Player/Room field is added, renamed, or removed,
 # or dungeon generation changes in a way old saves shouldn't carry forward).
 # Saves tagged with a different version are discarded instead of being loaded.
-SAVE_VERSION = 9
+SAVE_VERSION = 10
 
 
 def default_save_dir() -> Path:
@@ -87,6 +87,9 @@ def save_player(
         | {
             "visited": sorted(player.visited),
             "used_skills_this_round": sorted(player.used_skills_this_round),
+            "purchased_upgrade_slots_this_level": sorted(
+                player.purchased_upgrade_slots_this_level
+            ),
         },
         "running": running,
     }
@@ -111,6 +114,9 @@ def load_player(
     )
     player_data["visited"] = set(player_data["visited"])
     player_data["used_skills_this_round"] = set(player_data["used_skills_this_round"])
+    player_data["purchased_upgrade_slots_this_level"] = set(
+        player_data["purchased_upgrade_slots_this_level"]
+    )
     return Player(**player_data), state["running"]
 
 
