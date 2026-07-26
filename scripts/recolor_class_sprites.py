@@ -73,6 +73,14 @@ COLOR_MAPS = [
             (211, 191, 169, 255): (198, 188, 204, 255), # highlight -> cool grey-violet
             # (253, 247, 237, 255) skin/trim: left unchanged
         },
+        # wizzard_f's face is a large "hair"-colored mass covering the lower
+        # face (a beard silhouette carried over from the pack's wizard rig
+        # regardless of gender). A palette swap can't fix a silhouette, so
+        # after running this map, the beard-zone pixels (rows 17-20, roughly
+        # columns 7-11) were manually repainted to skin, and the row16
+        # remnant plus rows 19-20 shadow pixels cleaned up too, leaving the
+        # row17/18 outline pixels as a pair of eyes. See git history for the
+        # exact before/after diff on wizard_f_idle_anim_f0.png.
     },
 ]
 
