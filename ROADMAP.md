@@ -127,6 +127,23 @@ These were part of the roadmap discussion but have already been built:
   this isn't a revive mechanic. Every other class's skills that happen to
   reuse the same underlying heal effect (Warrior's rally/second wind,
   Wizard's drain life) are unaffected; only Cleric's `heal` gained this.
+- **Gold economy and a between-level shop.** Killing a monster now drops
+  gold (2 for a regular monster, 5 for a boss), tracked on the player
+  alongside XP. The vault room beyond a regular boss no longer
+  auto-advances the player the instant they step in; it's a shop instead,
+  selling potions (bandage, health potion, and a new mana potion, also
+  found as a rare dungeon drop) and that class's next weapon/off-hand tier
+  for the level, priced per the request (2/4 gold sell/buy per weapon tier,
+  2/3, 4/6, 4/6 sell/buy for bandage/health potion/mana potion). `buy`/
+  `sell` work there, and a new `descend` command replaces the old automatic
+  transition, so a player can shop, leave to grab more loot, and come back
+  before continuing.
+- **Dungeons tripled in size.** Room-count-per-level now grows from a
+  base of 18-30 (was 6-10) at +6 per level (was +2), since dungeons are
+  shared multiplayer spaces and benefit from more room to spread out
+  across. Purely a balance-constant change; dungeon generation, the 2D map,
+  and the ASCII map all already scaled to whatever room count they're
+  given.
 
 ## Planned
 

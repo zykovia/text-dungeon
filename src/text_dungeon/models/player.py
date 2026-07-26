@@ -24,6 +24,7 @@ class Player:
     visited: set[str] = field(default_factory=set)
     level: int = 1
     xp: int = 0
+    gold: int = 0
     dungeon_level: int = 1
     history: list[str] = field(default_factory=list)
     dungeon_history_start: int = 0

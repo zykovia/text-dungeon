@@ -6,6 +6,7 @@ class ItemTemplate:
     name: str
     description: str
     heal: int = 0
+    mana: int = 0
     damage_bonus: int = 0
     player_class: str | None = None
     slot: str | None = None
@@ -134,6 +135,9 @@ def _off_hand_templates() -> list[ItemTemplate]:
 POTION_TEMPLATES = [
     ItemTemplate("health potion", "A vial of red liquid that mends wounds.", heal=8),
     ItemTemplate("bandage", "Rough cloth, better than nothing.", heal=4),
+    ItemTemplate(
+        "mana potion", "A shimmering blue vial that restores magical energy.", mana=6
+    ),
 ]
 
 

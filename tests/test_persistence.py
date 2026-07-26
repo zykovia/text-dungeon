@@ -93,6 +93,20 @@ def test_save_and_load_player_round_trips_skills_and_mana(tmp_path):
     assert restored.used_skills_this_round == {"heal"}
 
 
+def test_save_and_load_player_round_trips_gold_and_mana_potion(tmp_path):
+    game = Game(seed=1)
+    game.player.gold = 17
+    game.current_room().items.append(Item("mana potion", "Restores energy.", mana=6))
+    game.take("mana potion")
+
+    save_player(WORLD_ID, "player-1d", game.player, True, save_dir=tmp_path)
+    restored, _ = load_player(WORLD_ID, "player-1d", save_dir=tmp_path)
+
+    assert restored.gold == 17
+    potion = next(item for item in restored.inventory if item.name == "mana potion")
+    assert potion.mana == 6
+
+
 def test_save_and_load_world_round_trips_room_and_monster_state(tmp_path):
     game = Game(seed=1)
     room = game.current_room()

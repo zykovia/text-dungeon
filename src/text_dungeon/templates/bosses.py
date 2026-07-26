@@ -19,8 +19,9 @@ BOSS = BossTemplate(
     monster_description="The master of this dungeon, clad in black iron.",
     vault_room_name="Stairs Beyond the Throne",
     vault_room_description=(
-        "Behind the throne, a stone stairway spirals down into darkness, "
-        "deeper into the dungeon."
+        "Behind the throne, a stone stairway spirals down into darkness, deeper "
+        "into the dungeon. A traveling merchant has set up a small stall here, "
+        "offering supplies before you continue on."
     ),
 )
 

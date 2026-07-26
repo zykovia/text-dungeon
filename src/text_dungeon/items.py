@@ -8,6 +8,7 @@ def item_from_template(template: ItemTemplate) -> Item:
         template.name,
         template.description,
         heal=template.heal,
+        mana=template.mana,
         damage_bonus=template.damage_bonus,
         player_class=template.player_class,
         slot=template.slot,

@@ -104,9 +104,9 @@ def test_generate_dungeon_handles_rooms_beyond_the_template_pool():
 
 
 def test_room_count_range_grows_with_dungeon_level():
-    assert room_count_range(1) == (6, 10)
-    assert room_count_range(2) == (8, 12)
-    assert room_count_range(3) == (10, 14)
+    assert room_count_range(1) == (18, 30)
+    assert room_count_range(2) == (24, 36)
+    assert room_count_range(3) == (30, 42)
 
 
 def test_is_final_dungeon_at_and_beyond_max_level():
@@ -142,6 +142,7 @@ def test_generate_dungeon_spawned_items_match_their_template():
                 checked_any = True
                 assert item.description == template.description
                 assert item.heal == template.heal
+                assert item.mana == template.mana
                 assert item.damage_bonus == template.damage_bonus
                 assert item.player_class == template.player_class
                 assert item.slot == template.slot

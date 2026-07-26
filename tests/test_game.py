@@ -335,10 +335,10 @@ def test_taking_the_crown_below_max_dungeon_level_advances():
     assert game.player.dungeon_level == MAX_DUNGEON_LEVEL
 
 
-def test_entering_a_regular_boss_vault_auto_advances_with_nothing_to_take():
-    # Regular (non-final) dungeons have no crown to collect: walking into
-    # the vault beyond the boss immediately advances the player, so nothing
-    # ever lands in inventory from clearing an ordinary dungeon.
+def test_entering_a_regular_boss_vault_opens_a_shop_without_advancing():
+    # Regular (non-final) dungeons have no crown to collect: the vault beyond
+    # the boss is a shop, not an instant transition - the player must
+    # `descend` explicitly to move on.
     game = Game(seed=1)
     vault_room = next(room for room in game.rooms.values() if room.auto_advance)
     boss_id = next(iter(vault_room.exits.values()))
@@ -348,9 +348,105 @@ def test_entering_a_regular_boss_vault_auto_advances_with_nothing_to_take():
     direction = next(d for d, dest in game.rooms[boss_id].exits.items() if dest == vault_room.id)
     game.move(direction)
 
+    assert game.player.dungeon_level == 1
+    assert game.player.current_room == vault_room.id
+
+
+def test_descend_advances_from_a_shop_room():
+    game = Game(seed=1)
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+
+    game.descend()
+
     assert game.player.dungeon_level == 2
     assert game.player.current_room == "entrance"
+
+
+def test_descend_does_nothing_outside_a_shop_room():
+    game = Game(seed=1)
+    game.player.current_room = "entrance"
+
+    game.descend()
+
+    assert game.player.dungeon_level == 1
+
+
+def test_attack_awards_gold_on_kill():
+    game = Game(seed=1)
+    game.current_room().monster = Monster("test monster", hp=1, attack=1)
+
+    game.attack()
+
+    assert game.player.gold == 2
+
+
+def test_attack_awards_boss_gold_on_boss_kill():
+    game = Game(seed=1)
+    game.current_room().monster = Monster("Dungeon Lord", hp=1, attack=1)
+
+    game.attack()
+
+    assert game.player.gold == 5
+
+
+def test_shop_commands_only_work_in_a_shop_room():
+    game = Game(seed=1)
+    game.player.current_room = "entrance"
+
+    game.buy("bandage")
+    game.sell("bandage")
+
+    assert game.player.gold == 0
     assert game.player.inventory == []
+
+
+def test_buy_deducts_gold_and_adds_item():
+    game = Game(seed=1)
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+    game.player.gold = 10
+
+    game.buy("bandage")
+
+    assert game.player.gold == 7
+    assert any(item.name == "bandage" for item in game.player.inventory)
+
+
+def test_buy_fails_when_not_enough_gold():
+    game = Game(seed=1)
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+    game.player.gold = 0
+
+    game.buy("bandage")
+
+    assert game.player.gold == 0
+    assert game.player.inventory == []
+
+
+def test_sell_credits_gold_and_removes_item():
+    game = Game(seed=1)
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+    game.player.inventory.append(Item("bandage", "Rough cloth, better than nothing.", heal=4))
+
+    game.sell("bandage")
+
+    assert game.player.gold == 2
+    assert game.player.inventory == []
+
+
+def test_sell_refuses_an_equipped_item():
+    game = Game(seed=1)
+    vault_room = next(room for room in game.rooms.values() if room.auto_advance)
+    game.player.current_room = vault_room.id
+    equipped = game.player.main_hand
+
+    game.sell(equipped.name)
+
+    assert game.player.gold == 0
+    assert game.player.main_hand is equipped
 
 
 def test_history_records_moves_looks_and_attacks():

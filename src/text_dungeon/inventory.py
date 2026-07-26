@@ -54,18 +54,21 @@ def unequip_item(player: Player, item_name: str) -> Item | None:
 class UseResult:
     item: Item | None
     healed: int = 0
+    mana_restored: int = 0
 
 
 def use_item(player: Player, item_name: str) -> UseResult:
-    """Consume the item named `item_name` from inventory, if present and usable (heals)."""
+    """Consume the item named `item_name` from inventory, if present and usable (heals/restores mana)."""
     for item in player.inventory:
         if item.name == item_name:
-            if not item.heal:
-                return UseResult(item=item, healed=0)
+            if not item.heal and not item.mana:
+                return UseResult(item=item)
             healed = min(item.heal, player.max_hp - player.hp)
+            mana_restored = min(item.mana, player.max_mana - player.mana)
             player.hp += healed
+            player.mana += mana_restored
             player.inventory.remove(item)
-            return UseResult(item=item, healed=healed)
+            return UseResult(item=item, healed=healed, mana_restored=mana_restored)
     return UseResult(item=None)
 
 

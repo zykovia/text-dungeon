@@ -13,7 +13,7 @@ from .world_state import World
 # or misbehave on load (e.g. a Player/Room field is added, renamed, or removed,
 # or dungeon generation changes in a way old saves shouldn't carry forward).
 # Saves tagged with a different version are discarded instead of being loaded.
-SAVE_VERSION = 8
+SAVE_VERSION = 9
 
 
 def default_save_dir() -> Path:

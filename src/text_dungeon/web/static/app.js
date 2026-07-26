@@ -10,6 +10,7 @@ const classText = document.getElementById("class-text");
 const levelText = document.getElementById("level-text");
 const xpText = document.getElementById("xp-text");
 const dungeonText = document.getElementById("dungeon-text");
+const goldText = document.getElementById("gold-text");
 const mapCanvas = document.getElementById("map-canvas");
 const mapCanvasCtx = mapCanvas.getContext("2d");
 const mapEmptyMessage = document.getElementById("map-empty-message");
@@ -211,6 +212,7 @@ function renderStatus(status) {
   levelText.textContent = status.level;
   xpText.textContent = `${status.xp}/${status.xp_per_level}`;
   dungeonText.textContent = `${status.dungeon_level}/${status.max_dungeon_level}`;
+  goldText.textContent = status.gold;
 
   currentPlayerClass = status.player_class;
   lastRoomsRendered = status.rooms;

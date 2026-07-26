@@ -20,6 +20,10 @@ Commands:
   skills           show the skills/spells you know
   cast <skill>     cast a known skill or spell (once per round)
   say <message>    talk to others in the room
+  shop             view what's for sale (only where a merchant is)
+  buy <item>       purchase an item from the shop
+  sell <item>      sell an item from your inventory for gold
+  descend          continue to the next dungeon level from a shop
   map (m)          show a map of rooms you've explored
   history          show everything you've done this playthrough
   help             show this message
@@ -95,6 +99,30 @@ def _cmd_say(game: Game, arg: str) -> None:
     game.say(arg)
 
 
+def _cmd_shop(game: Game, arg: str) -> None:
+    game.show_shop()
+
+
+def _cmd_buy(game: Game, arg: str) -> None:
+    arg = arg.lower()
+    if not arg:
+        game.emit("Buy what?")
+        return
+    game.buy(arg)
+
+
+def _cmd_sell(game: Game, arg: str) -> None:
+    arg = arg.lower()
+    if not arg:
+        game.emit("Sell what?")
+        return
+    game.sell(arg)
+
+
+def _cmd_descend(game: Game, arg: str) -> None:
+    game.descend()
+
+
 def _cmd_help(game: Game, arg: str) -> None:
     for line in HELP_TEXT.splitlines():
         game.emit(line)
@@ -127,6 +155,10 @@ COMMANDS: dict[str, Callable[[Game, str], None]] = {
     "skills": _cmd_skills,
     "cast": _cmd_cast,
     "say": _cmd_say,
+    "shop": _cmd_shop,
+    "buy": _cmd_buy,
+    "sell": _cmd_sell,
+    "descend": _cmd_descend,
     "help": _cmd_help,
     "quit": _cmd_quit,
     "map": _cmd_map,

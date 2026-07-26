@@ -1,15 +1,26 @@
 from __future__ import annotations
 
-from . import history, inventory, skills
+from . import history, inventory, shop, skills
 from .balance import MAX_DUNGEON_LEVEL
 from .character import DEFAULT_PLAYER_CLASS, create_player
 from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
+from .gold import gold_for_kill
+from .items import item_from_template
 from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
 from .minimap import compute_coords, known_room_ids, room_snapshots
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
-from .templates import BOSS, MAX_ITEM_TIER, SUPER_BOSS, WIN_ITEM_NAME, skill_template_for
+from .templates import (
+    BOSS,
+    MAX_ITEM_TIER,
+    POTION_TEMPLATES,
+    SUPER_BOSS,
+    WIN_ITEM_NAME,
+    ItemTemplate,
+    item_template_for,
+    skill_template_for,
+)
 from .world import is_final_dungeon
 from .world_state import World
 
@@ -55,9 +66,7 @@ class Game:
         must not re-mark history or re-toggle upgrade bookkeeping (see
         advance(), which does those explicitly for a real level transition).
         """
-        upgrade_slot = self.player.next_upgrade_slot
-        equipped = getattr(self.player, upgrade_slot)
-        upgrade_tier = min((equipped.tier if equipped else 0) + 1, MAX_ITEM_TIER)
+        upgrade_slot, upgrade_tier = self._next_upgrade()
         self.rooms = self.world.level_rooms(
             self.player.dungeon_level,
             player_class=self.player.player_class,
@@ -72,6 +81,13 @@ class Game:
             # room was already visited) instead of crashing on first look().
             self.player.current_room = "entrance"
             self.player.visited = set()
+
+    def _next_upgrade(self) -> tuple[str, int]:
+        """Which slot/tier is due next for this player's class (drops and shop stock alike)."""
+        slot = self.player.next_upgrade_slot
+        equipped = getattr(self.player, slot)
+        tier = min((equipped.tier if equipped else 0) + 1, MAX_ITEM_TIER)
+        return slot, tier
 
     def respawn(self) -> None:
         """Return to the entrance of the current (persistent) level after death."""
@@ -95,6 +111,13 @@ class Game:
             f"A new dungeon awaits below, larger than the last (depth {self.player.dungeon_level})."
         )
         self.look()
+
+    def descend(self) -> None:
+        """Leave the current level's shop and advance, if standing in it."""
+        if not self.current_room().auto_advance:
+            self.emit("There's nothing to descend here.")
+            return
+        self.advance()
 
     def emit(self, text: str = "") -> None:
         self.output.append(text)
@@ -179,13 +202,6 @@ class Game:
             self.emit("You can't go that way.")
             return
         self.player.current_room = destination
-        destination_room = self.rooms[destination]
-        if destination_room.auto_advance:
-            self.emit("")
-            self.emit(f"== {destination_room.name} ==")
-            self.emit(destination_room.description)
-            self.advance()
-            return
         self.look()
 
     def take(self, item_name: str) -> None:
@@ -241,6 +257,60 @@ class Game:
             return
         self.emit(f"You unequip the {inventory.item_label(item)}.")
 
+    def shop_catalog(self) -> list[ItemTemplate]:
+        """Potions plus this level's next weapon/off-hand upgrade for the player's class."""
+        slot, tier = self._next_upgrade()
+        catalog = list(POTION_TEMPLATES)
+        upgrade = item_template_for(self.player.player_class, slot, tier)
+        if upgrade is not None:
+            catalog.append(upgrade)
+        return catalog
+
+    def show_shop(self) -> None:
+        if not self.current_room().auto_advance:
+            self.emit("There's no shop here.")
+            return
+        self.emit(f"You have {self.player.gold} gold.")
+        for template in self.shop_catalog():
+            self.emit(f"- {template.name} ({shop.buy_price(template)} gold): {template.description}")
+
+    def buy(self, item_name: str) -> None:
+        if not self.current_room().auto_advance:
+            self.emit("There's no shop here.")
+            return
+        template = next((t for t in self.shop_catalog() if t.name == item_name), None)
+        if template is None:
+            self.emit(f"The shop doesn't have a '{item_name}'.")
+            return
+        price = shop.buy_price(template)
+        if self.player.gold < price:
+            self.emit(
+                f"You can't afford the {template.name} ({price} gold, you have {self.player.gold})."
+            )
+            return
+        self.player.gold -= price
+        self.player.inventory.append(item_from_template(template))
+        self.emit(f"You buy the {template.name} for {price} gold. ({self.player.gold} gold left)")
+
+    def sell(self, item_name: str) -> None:
+        if not self.current_room().auto_advance:
+            self.emit("There's no shop here.")
+            return
+        if self.player.main_hand and self.player.main_hand.name == item_name:
+            self.emit(f"Unequip the {item_name} before selling it.")
+            return
+        if self.player.off_hand and self.player.off_hand.name == item_name:
+            self.emit(f"Unequip the {item_name} before selling it.")
+            return
+        item = next((i for i in self.player.inventory if i.name == item_name), None)
+        if item is None:
+            self.emit(f"You don't have a '{item_name}'.")
+            return
+        price = shop.sell_price(item)
+        self.player.inventory.remove(item)
+        self.player.gold += price
+        self.emit(f"You sell the {item.name} for {price} gold. ({self.player.gold} gold)")
+
     def current_dungeon_history(self) -> list[str]:
         return history.current_dungeon_history(self.player)
 
@@ -272,6 +342,9 @@ class Game:
             xp_gained = xp_for_kill(monster.name, BOSS.monster_name, SUPER_BOSS.monster_name)
             level_ups = gain_xp(self.player, xp_gained)
             self.emit(f"You gain {xp_gained} experience. ({self.player.xp} XP)")
+            gold_gained = gold_for_kill(monster.name, BOSS.monster_name, SUPER_BOSS.monster_name)
+            self.player.gold += gold_gained
+            self.emit(f"You find {gold_gained} gold. ({self.player.gold} gold)")
             for level_up in level_ups:
                 self.emit(
                     f"You reached level {level_up.level}! "
@@ -279,8 +352,6 @@ class Game:
                 )
                 if level_up.skill_learned:
                     self.emit(f"You've learned {level_up.skill_learned}!")
-            if room.auto_advance:
-                self.advance()
             return
 
         self.last_broadcast = (
@@ -296,13 +367,17 @@ class Game:
         if result.item is None:
             self.emit(f"You don't have a '{item_name}'.")
             return
-        if not result.item.heal:
+        if not result.item.heal and not result.item.mana:
             self.emit(f"You can't use the {result.item.name} right now.")
             return
-        self.emit(
-            f"You use the {result.item.name} and recover {result.healed} HP. "
-            f"({self.player.hp}/{self.player.max_hp} HP)"
-        )
+        effects = []
+        if result.healed:
+            effects.append(f"recover {result.healed} HP ({self.player.hp}/{self.player.max_hp} HP)")
+        if result.mana_restored:
+            effects.append(
+                f"restore {result.mana_restored} mana ({self.player.mana}/{self.player.max_mana} mana)"
+            )
+        self.emit(f"You use the {result.item.name} and " + " and ".join(effects) + ".")
 
     def say(self, message: str) -> None:
         if not message:
@@ -365,18 +440,30 @@ class Game:
 
     def status(self) -> dict:
         """A snapshot of everything a UI needs for a stats/map/inventory sidebar."""
+        in_shop = self.current_room().auto_advance
         return {
             "name": self.player.name,
             "hp": self.player.hp,
             "max_hp": self.player.max_hp,
             "mana": self.player.mana,
             "max_mana": self.player.max_mana,
+            "gold": self.player.gold,
             "player_class": self.player.player_class,
             "level": self.player.level,
             "xp": self.player.xp,
             "xp_per_level": XP_PER_LEVEL,
             "dungeon_level": self.player.dungeon_level,
             "max_dungeon_level": MAX_DUNGEON_LEVEL,
+            "shop": [
+                {
+                    "name": template.name,
+                    "description": template.description,
+                    "price": shop.buy_price(template),
+                }
+                for template in self.shop_catalog()
+            ]
+            if in_shop
+            else None,
             "equipment": {
                 "main_hand": inventory.item_summary(self.player.main_hand),
                 "off_hand": inventory.item_summary(self.player.off_hand),

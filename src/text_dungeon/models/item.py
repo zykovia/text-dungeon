@@ -6,6 +6,7 @@ class Item:
     name: str
     description: str
     heal: int = 0
+    mana: int = 0
     damage_bonus: int = 0
     player_class: str | None = None
     slot: str | None = None
@@ -22,4 +23,6 @@ class Item:
             parts.append(f"+{self.defense_bonus} armor")
         if self.heal:
             parts.append(f"heals {self.heal} HP")
+        if self.mana:
+            parts.append(f"restores {self.mana} mana")
         return ", ".join(parts)

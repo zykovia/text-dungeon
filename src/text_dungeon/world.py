@@ -35,7 +35,7 @@ ENTRANCE_DESCRIPTION = (
 
 
 def room_count_range(dungeon_level: int) -> tuple[int, int]:
-    """Each dungeon level is bigger than the last: +2 rooms (min and max) per level."""
+    """Each dungeon level is bigger than the last: +6 rooms (min and max) per level."""
     growth = (dungeon_level - 1) * ROOMS_GROWTH_PER_DUNGEON_LEVEL
     return BASE_MIN_ROOMS + growth, BASE_MAX_ROOMS + growth
 

@@ -134,6 +134,30 @@ def test_use_item_without_heal_is_left_in_inventory():
     assert sword in player.inventory
 
 
+def test_use_item_restores_mana_and_removes_from_inventory():
+    player = _player(mana=2, max_mana=20)
+    potion = Item("mana potion", "Restores energy.", mana=6)
+    player.inventory.append(potion)
+
+    result = use_item(player, "mana potion")
+
+    assert result.item is potion
+    assert result.mana_restored == 6
+    assert player.mana == 8
+    assert potion not in player.inventory
+
+
+def test_use_item_mana_caps_at_max_mana():
+    player = _player(mana=18, max_mana=20)
+    potion = Item("mana potion", "Restores energy.", mana=6)
+    player.inventory.append(potion)
+
+    result = use_item(player, "mana potion")
+
+    assert result.mana_restored == 2
+    assert player.mana == 20
+
+
 def test_use_item_missing_reports_not_found():
     player = _player()
 
