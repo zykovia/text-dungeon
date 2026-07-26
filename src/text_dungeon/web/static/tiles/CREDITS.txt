@@ -13,7 +13,9 @@ produced with scripts/recolor_class_sprites.py to give each class a distinct
 palette. As derivatives of CC0 art, they carry no additional license
 restrictions.
 
-wizard_f_idle_anim_f0.png also has hand-edited pixels beyond the palette
-swap: the source wizzard_f frame's beard silhouette was repainted to a clean
-face, since a recolor alone can't change a silhouette. See the comment next
-to its entry in scripts/recolor_class_sprites.py.
+wizard_f_idle_anim_f0.png, warrior_f_idle_anim_f0.png, and
+cleric_f_idle_anim_f0.png also have hand-edited pixels beyond the palette
+swap (a repainted face for the Wizard, a hair/ribbon accent for the Warrior,
+a halo/wing accent for the Cleric), since a recolor alone can't change a
+silhouette. See the comments next to each entry in
+scripts/recolor_class_sprites.py.

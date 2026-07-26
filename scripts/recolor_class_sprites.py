@@ -37,6 +37,13 @@ COLOR_MAPS = [
             (220, 74, 123, 255): (35, 26, 22, 255),     # helmet plume -> near-black
             (247, 134, 151, 255): (72, 54, 44, 255),    # plume highlight -> dark brown
         },
+        # Hand touch-up after this map, for a Chinese-female-warrior read: the
+        # plume colors were pushed further toward true black hair ((35,26,22)
+        # -> (20,18,20), (72,54,44) -> (42,38,46)), one pixel recolored to red
+        # as a ribbon accent, and a few pixels of flowing hair added in the
+        # empty margins beside the shoulders (same margins used for the
+        # Cleric's wing accent below). Same rig/silhouette as knight_f
+        # throughout, still shared with Cleric.
     },
     {
         "source": "elf_f_idle_anim_f0.png",
@@ -61,6 +68,11 @@ COLOR_MAPS = [
             (220, 74, 123, 255): (214, 178, 60, 255),   # helmet plume -> gold
             (247, 134, 151, 255): (235, 205, 120, 255), # plume highlight -> light gold
         },
+        # Hand touch-up after this map, for an angel/saint read: a floating
+        # gold halo ring (2px) added in the blank rows above the helmet, plus
+        # small white wing-tip accents in the empty margins beside the
+        # shoulders. Same knight_f rig/silhouette throughout, still shared
+        # with Warrior.
     },
     {
         "source": "wizzard_f_idle_anim_f0.png",
