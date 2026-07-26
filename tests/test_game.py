@@ -390,6 +390,43 @@ def test_attack_awards_boss_gold_on_boss_kill():
     assert game.player.gold == 5
 
 
+def test_attack_shares_full_xp_and_gold_with_every_player_in_world_on_kill():
+    game = Game(seed=1)
+    game.current_room().monster = Monster("test monster", hp=1, attack=1)
+    other = create_player("Warrior", name="Other")
+    game.players_in_world = [other]
+
+    game.attack()
+
+    assert other.xp == game.player.xp
+    assert other.gold == game.player.gold == 2
+
+
+def test_attack_records_last_kill_rewards_for_players_in_world():
+    game = Game(seed=1)
+    game.current_room().monster = Monster("test monster", hp=1, attack=1)
+    other = create_player("Warrior", name="Other")
+    game.players_in_world = [other]
+
+    game.attack()
+
+    assert len(game.last_kill_rewards) == 1
+    reward = game.last_kill_rewards[0]
+    assert reward.player is other
+    assert reward.xp == 2
+    assert reward.gold == 2
+    assert reward.monster_name == "test monster"
+
+
+def test_attack_with_no_players_in_world_leaves_last_kill_rewards_empty():
+    game = Game(seed=1)
+    game.current_room().monster = Monster("test monster", hp=1, attack=1)
+
+    game.attack()
+
+    assert game.last_kill_rewards == []
+
+
 def test_shop_commands_only_work_in_a_shop_room():
     game = Game(seed=1)
     game.player.current_room = "entrance"

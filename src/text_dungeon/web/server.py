@@ -102,6 +102,21 @@ def _allies_in_range(
     ]
 
 
+def _active_players_in_world(
+    sessions: dict[str, tuple[WebSocket, Game]], exclude_player_id: str
+) -> list[Player]:
+    """Every other alive player connected to this world, for world-wide kill
+    XP/gold sharing. Excludes non-alive players for the same reason
+    _allies_in_range does: a downed player shouldn't passively collect
+    rewards while waiting to respawn.
+    """
+    return [
+        other_game.player
+        for player_id, (_, other_game) in sessions.items()
+        if player_id != exclude_player_id and other_game.player.alive
+    ]
+
+
 def _status_with_players(
     game: Game, sessions: dict[str, tuple[WebSocket, Game]], exclude_player_id: str
 ) -> dict:
@@ -294,6 +309,8 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
                 verb = command.split(" ", 1)[0].lower()
                 if verb == "cast":
                     game.allies_in_range = _allies_in_range(game, sessions, player_id)
+                elif verb == "attack":
+                    game.players_in_world = _active_players_in_world(sessions, player_id)
 
                 before = (game.player.dungeon_level, game.player.current_room)
                 game.handle_command(command)
@@ -328,6 +345,34 @@ async def play(websocket: WebSocket, player_id: str | None = Cookie(default=None
                             [owning_id],
                             f"{game.player.name}'s heal washes over you, restoring {amount} HP.",
                         )
+                for reward in game.last_kill_rewards:
+                    owning_id = next(
+                        (pid for pid, (_, g) in sessions.items() if g.player is reward.player), None
+                    )
+                    if owning_id is not None:
+                        _mark_pending(
+                            pending,
+                            [owning_id],
+                            f"{game.player.name}'s kill of the {reward.monster_name} grants you "
+                            f"{reward.xp} experience. ({reward.player.xp} XP)",
+                        )
+                        _mark_pending(
+                            pending,
+                            [owning_id],
+                            f"You find {reward.gold} gold. ({reward.player.gold} gold)",
+                        )
+                        for level_up in reward.level_ups:
+                            _mark_pending(
+                                pending,
+                                [owning_id],
+                                f"You reached level {level_up.level}! Max HP is now "
+                                f"{level_up.max_hp}, and you feel fully healed.",
+                            )
+                            if level_up.skill_learned:
+                                _mark_pending(
+                                    pending, [owning_id], f"You've learned {level_up.skill_learned}!"
+                                )
+                game.last_kill_rewards = []
                 if before != after:
                     before_level, before_room = before
                     after_level, after_room = after
