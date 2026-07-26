@@ -54,10 +54,10 @@ const FLASK_ICON = "flask_red.png";
 const WEAPON_ICON = "weapon_rusty_sword.png";
 
 const CLASS_SPRITES = {
-  Warrior: "knight_m_idle_anim_f0.png",
-  Ranger: "elf_m_idle_anim_f0.png",
-  Cleric: "dwarf_m_idle_anim_f0.png",
-  Wizard: "wizzard_m_idle_anim_f0.png",
+  Warrior: "warrior_f_idle_anim_f0.png",
+  Ranger: "ranger_f_idle_anim_f0.png",
+  Cleric: "cleric_f_idle_anim_f0.png",
+  Wizard: "wizard_f_idle_anim_f0.png",
 };
 
 const MONSTER_SPRITES = {
