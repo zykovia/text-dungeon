@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from . import history, inventory, shop, skills
 from .balance import MAX_DUNGEON_LEVEL
 from .character import DEFAULT_PLAYER_CLASS, create_player
@@ -7,7 +9,7 @@ from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
 from .gold import gold_for_kill
 from .items import item_from_template
-from .leveling import XP_PER_LEVEL, gain_xp, xp_for_kill
+from .leveling import XP_PER_LEVEL, LevelUp, gain_xp, xp_for_kill
 from .minimap import compute_coords, known_room_ids, room_snapshots
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
@@ -23,6 +25,15 @@ from .templates import (
 )
 from .world import is_final_dungeon
 from .world_state import World
+
+
+@dataclass
+class KillReward:
+    player: Player
+    xp: int
+    gold: int
+    monster_name: str
+    level_ups: list[LevelUp]
 
 
 class Game:
@@ -57,6 +68,12 @@ class Game:
         # relevant command, so it's always current when cast() reads it.
         self.allies_in_range: list[Player] = []
         self.last_ally_heals: list[tuple[Player, int]] = []
+        # Populated from OUTSIDE by web/server.py, right before an `attack`
+        # command is dispatched, same reason and same shape as
+        # allies_in_range above: every other alive player connected to the
+        # world, so a kill's XP/gold can be shared world-wide.
+        self.players_in_world: list[Player] = []
+        self.last_kill_rewards: list[KillReward] = []
 
     def _load_current_level(self, seed: int | None = None) -> None:
         """Point self.rooms/coords at the player's current level in the shared world.
@@ -352,6 +369,20 @@ class Game:
                 )
                 if level_up.skill_learned:
                     self.emit(f"You've learned {level_up.skill_learned}!")
+
+            self.last_kill_rewards = []
+            for other in self.players_in_world:
+                other_level_ups = gain_xp(other, xp_gained)
+                other.gold += gold_gained
+                self.last_kill_rewards.append(
+                    KillReward(
+                        player=other,
+                        xp=xp_gained,
+                        gold=gold_gained,
+                        monster_name=monster.name,
+                        level_ups=other_level_ups,
+                    )
+                )
             return
 
         self.last_broadcast = (

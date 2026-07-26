@@ -127,6 +127,14 @@ These were part of the roadmap discussion but have already been built:
   this isn't a revive mechanic. Every other class's skills that happen to
   reuse the same underlying heal effect (Warrior's rally/second wind,
   Wizard's drain life) are unaffected; only Cleric's `heal` gained this.
+- **World-wide XP and gold sharing on kill.** Defeating a monster used to
+  grant XP and gold only to whoever landed the killing blow; now every
+  alive player connected to that world gets the full reward, not a split
+  share, so a party spread across the dungeon still levels up together.
+  Scope is the whole world, matching the same world-wide reach `say`
+  already has, rather than the narrower room/adjacent-tile range used for
+  Cleric's heal. A downed player waiting to respawn is excluded, for the
+  same reason `cast heal` already excludes one from targeting.
 - **Gold economy and a between-level shop.** Killing a monster now drops
   gold (2 for a regular monster, 5 for a boss), tracked on the player
   alongside XP. The vault room beyond a regular boss no longer

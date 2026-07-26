@@ -67,11 +67,13 @@ play's "every death is a fresh dungeon" today.
 ## Shared combat and items
 
 `Room.monster` becomes one object any player currently in that room can
-attack; whoever lands the killing blow gets the XP, individually, same as
-today. `Room.items` stays first-take-wins, already atomic. Two players in
-the same room simultaneously fighting the same monster, or racing for the
-same item, is the intended shared-dungeon experience, not an edge case to
-prevent.
+attack. Landing the killing blow still takes one player's `attack`, but the
+XP and gold from that kill go to every alive, connected player in the
+world, not just the one who struck it - so a party spread across the
+dungeon still levels up together. `Room.items` stays first-take-wins,
+already atomic. Two players in the same room simultaneously fighting the
+same monster, or racing for the same item, is the intended shared-dungeon
+experience, not an edge case to prevent.
 
 ## Concurrency: why no locks, and the one constraint that buys it
 

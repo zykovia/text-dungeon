@@ -2,6 +2,7 @@ from text_dungeon.character import create_player
 from text_dungeon.game import Game
 from text_dungeon.models import Room
 from text_dungeon.web.server import (
+    _active_players_in_world,
     _allies_in_range,
     _mark_pending,
     _mark_room_presence,
@@ -326,3 +327,41 @@ def test_allies_in_range_excludes_the_caster():
     sessions = {"caster": (None, caster)}
 
     assert _allies_in_range(caster, sessions, exclude_player_id="caster") == []
+
+
+def test_active_players_in_world_includes_everyone_alive_regardless_of_room_or_level():
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    same_room = _game_at(world, 1, "entrance", name="SameRoom")
+    far_room = _game_at(world, 1, "vault", name="FarRoom")
+    other_level = create_player("Ranger", name="OtherLevel")
+    other_level.dungeon_level = 2
+    other_level_game = Game(player=other_level, world=world)
+    sessions = {
+        "acting": (None, acting),
+        "same-room": (None, same_room),
+        "far-room": (None, far_room),
+        "other-level": (None, other_level_game),
+    }
+
+    players = _active_players_in_world(sessions, exclude_player_id="acting")
+
+    assert {player.name for player in players} == {"SameRoom", "FarRoom", "OtherLevel"}
+
+
+def test_active_players_in_world_excludes_the_acting_player():
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    sessions = {"acting": (None, acting)}
+
+    assert _active_players_in_world(sessions, exclude_player_id="acting") == []
+
+
+def test_active_players_in_world_excludes_a_dead_player():
+    world = _chain_world()
+    acting = _game_at(world, 1, "entrance", name="Acting")
+    dead = _game_at(world, 1, "vault", name="Dead")
+    dead.player.hp = 0
+    sessions = {"acting": (None, acting), "dead": (None, dead)}
+
+    assert _active_players_in_world(sessions, exclude_player_id="acting") == []
