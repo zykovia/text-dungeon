@@ -175,3 +175,11 @@ Not yet committed to, but worth keeping in mind as the above lands:
 - A first-person (Wizardry/Dungeon Master-style) viewport for the web
   client, as an addition to the top-down map rather than a replacement for
   it. Full write-up in `FIRST-PERSON-PLAN.md`.
+- A light narrative layer: authored per-world flavor text, static NPC
+  dialogue, and a simple main quest thread, replacing today's generic
+  procedural room text. Full write-up in `STORY-AND-WORLD-PLAN.md`.
+
+Recommended order if/when these three get picked up: 2D-GRAPHICS-PLAN.md
+Phase 5 (small, already scoped) first, then STORY-AND-WORLD-PLAN.md
+(highest narrative payoff for the effort), then FIRST-PERSON-PLAN.md
+(largest lift, least essential to "feels like a story-driven adventure").
