@@ -47,7 +47,7 @@ to "feels like an adventure game with a story").
 
 ## Phases
 
-**Phase 0: Write the content, no code.**
+**Phase 0: Write the content, no code.** Done, see `STORY-CONTENT-DRAFT.md`.
 For each entry in `templates/worlds.py`, draft: a one-paragraph world intro
 (shown on entry), 3-5 room-flavor variants themed to that world (replacing
 the generic ones from `templates/rooms.py` for that world only), one
