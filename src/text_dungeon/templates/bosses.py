@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from ..balance import BOSS_GOLD, BOSS_XP, SUPER_BOSS_XP
+
 
 @dataclass(frozen=True)
 class BossTemplate:
@@ -10,6 +12,8 @@ class BossTemplate:
     vault_room_name: str
     vault_room_description: str
     crown_description: str | None = None
+    xp: int = BOSS_XP
+    gold: int = BOSS_GOLD
 
 
 BOSS = BossTemplate(
@@ -39,6 +43,7 @@ SUPER_BOSS = BossTemplate(
     vault_room_description=(
         "Beyond the sanctum, a hidden chamber holds the empire's most sacred relic."
     ),
+    xp=SUPER_BOSS_XP,
 )
 
 WIN_ITEM_NAME = "golden crown"

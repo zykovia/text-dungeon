@@ -1,34 +1,5 @@
-from text_dungeon.leveling import (
-    BOSS_XP,
-    MONSTER_XP,
-    SUPER_BOSS_XP,
-    XP_PER_LEVEL,
-    gain_xp,
-    xp_for_kill,
-)
+from text_dungeon.leveling import XP_PER_LEVEL, gain_xp
 from text_dungeon.models import Player
-
-
-def test_xp_for_kill_regular_monster():
-    assert xp_for_kill("skeleton", boss_name="Dungeon Lord") == MONSTER_XP
-
-
-def test_xp_for_kill_boss():
-    assert xp_for_kill("Dungeon Lord", boss_name="Dungeon Lord") == BOSS_XP
-
-
-def test_xp_for_kill_super_boss():
-    assert (
-        xp_for_kill("Dungeon Emperor", boss_name="Dungeon Lord", super_boss_name="Dungeon Emperor")
-        == SUPER_BOSS_XP
-    )
-
-
-def test_xp_for_kill_regular_boss_when_super_boss_name_also_given():
-    assert (
-        xp_for_kill("Dungeon Lord", boss_name="Dungeon Lord", super_boss_name="Dungeon Emperor")
-        == BOSS_XP
-    )
 
 
 def test_gain_xp_below_threshold_no_level_up():

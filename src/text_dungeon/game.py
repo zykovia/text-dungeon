@@ -7,14 +7,12 @@ from .balance import MAX_DUNGEON_LEVEL
 from .character import DEFAULT_PLAYER_CLASS, create_player
 from .combat import resolve_attack
 from .commands import handle_command as dispatch_command
-from .gold import gold_for_kill
 from .items import item_from_template
-from .leveling import XP_PER_LEVEL, LevelUp, gain_xp, xp_for_kill
+from .leveling import XP_PER_LEVEL, LevelUp, gain_xp
 from .minimap import compute_coords, confirmed_wall_coords, known_room_ids, room_snapshots
 from .minimap import render_map as build_map_lines
 from .models import Player, Room
 from .templates import (
-    BOSS,
     MAX_ITEM_TIER,
     POTION_TEMPLATES,
     SUPER_BOSS,
@@ -364,10 +362,10 @@ class Game:
                 room.id,
                 f"{self.player.name} has defeated the {monster.name}!",
             )
-            xp_gained = xp_for_kill(monster.name, BOSS.monster_name, SUPER_BOSS.monster_name)
+            xp_gained = monster.xp
             level_ups = gain_xp(self.player, xp_gained)
             self.emit(f"You gain {xp_gained} experience. ({self.player.xp} XP)")
-            gold_gained = gold_for_kill(monster.name, BOSS.monster_name, SUPER_BOSS.monster_name)
+            gold_gained = monster.gold
             self.player.gold += gold_gained
             self.emit(f"You find {gold_gained} gold. ({self.player.gold} gold)")
             for level_up in level_ups:

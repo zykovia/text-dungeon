@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from ..balance import MONSTER_GOLD, MONSTER_XP
+
 
 @dataclass(frozen=True)
 class MonsterTemplate:
@@ -8,6 +10,8 @@ class MonsterTemplate:
     max_hp: int
     attack: int
     description: str
+    xp: int = MONSTER_XP
+    gold: int = MONSTER_GOLD
 
 
 MONSTER_TEMPLATES = [

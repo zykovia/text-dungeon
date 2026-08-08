@@ -198,6 +198,8 @@ def generate_dungeon(
             hp=rng.randint(*SUPER_BOSS_HP_RANGE),
             attack=rng.randint(*SUPER_BOSS_ATTACK_RANGE),
             description=SUPER_BOSS.monster_description,
+            xp=SUPER_BOSS.xp,
+            gold=SUPER_BOSS.gold,
         )
         crown_description = SUPER_BOSS.crown_description
         vault_name = SUPER_BOSS.vault_room_name
@@ -210,6 +212,8 @@ def generate_dungeon(
             hp=rng.randint(*BOSS_HP_RANGE),
             attack=rng.randint(*BOSS_ATTACK_RANGE),
             description=BOSS.monster_description,
+            xp=BOSS.xp,
+            gold=BOSS.gold,
         )
         vault_name = BOSS.vault_room_name
         vault_description = BOSS.vault_room_description
@@ -252,6 +256,8 @@ def generate_dungeon(
                 hp=rng.randint(monster_template.min_hp, monster_template.max_hp),
                 attack=monster_template.attack,
                 description=monster_template.description,
+                xp=monster_template.xp,
+                gold=monster_template.gold,
             )
         if rng.random() < ITEM_SPAWN_CHANCE:
             item_template = _pick_item_template(rng, player_class, upgrade_slot, upgrade_tier)

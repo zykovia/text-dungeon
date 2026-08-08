@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .balance import BOSS_XP, LEVEL_UP_HP_BONUS, MONSTER_XP, SUPER_BOSS_XP, XP_PER_LEVEL
+from .balance import LEVEL_UP_HP_BONUS, XP_PER_LEVEL
 from .models import Player
 from .templates import SKILL_TEMPLATES
 
@@ -12,14 +12,6 @@ class LevelUp:
     level: int
     max_hp: int
     skill_learned: str | None = None
-
-
-def xp_for_kill(monster_name: str, boss_name: str, super_boss_name: str | None = None) -> int:
-    if monster_name == super_boss_name:
-        return SUPER_BOSS_XP
-    if monster_name == boss_name:
-        return BOSS_XP
-    return MONSTER_XP
 
 
 def _skill_unlocked_at(player_class: str, level: int) -> str | None:
