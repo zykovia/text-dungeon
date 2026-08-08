@@ -7,6 +7,8 @@ class Monster:
     hp: int
     attack: int
     description: str = ""
+    xp: int = 0
+    gold: int = 0
 
     @property
     def alive(self) -> bool:

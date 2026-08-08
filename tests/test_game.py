@@ -374,7 +374,7 @@ def test_descend_does_nothing_outside_a_shop_room():
 
 def test_attack_awards_gold_on_kill():
     game = Game(seed=1)
-    game.current_room().monster = Monster("test monster", hp=1, attack=1)
+    game.current_room().monster = Monster("test monster", hp=1, attack=1, gold=2)
 
     game.attack()
 
@@ -383,7 +383,7 @@ def test_attack_awards_gold_on_kill():
 
 def test_attack_awards_boss_gold_on_boss_kill():
     game = Game(seed=1)
-    game.current_room().monster = Monster("Dungeon Lord", hp=1, attack=1)
+    game.current_room().monster = Monster("Dungeon Lord", hp=1, attack=1, gold=5)
 
     game.attack()
 
@@ -392,7 +392,7 @@ def test_attack_awards_boss_gold_on_boss_kill():
 
 def test_attack_shares_full_xp_and_gold_with_every_player_in_world_on_kill():
     game = Game(seed=1)
-    game.current_room().monster = Monster("test monster", hp=1, attack=1)
+    game.current_room().monster = Monster("test monster", hp=1, attack=1, xp=2, gold=2)
     other = create_player("Warrior", name="Other")
     game.players_in_world = [other]
 
@@ -404,7 +404,7 @@ def test_attack_shares_full_xp_and_gold_with_every_player_in_world_on_kill():
 
 def test_attack_records_last_kill_rewards_for_players_in_world():
     game = Game(seed=1)
-    game.current_room().monster = Monster("test monster", hp=1, attack=1)
+    game.current_room().monster = Monster("test monster", hp=1, attack=1, xp=2, gold=2)
     other = create_player("Warrior", name="Other")
     game.players_in_world = [other]
 
